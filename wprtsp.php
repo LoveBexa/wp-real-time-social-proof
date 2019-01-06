@@ -106,6 +106,7 @@ class WPRTSP {
         wp_nonce_field( 'socialproof_meta_box_nonce', 'socialproof_meta_box_nonce' );
         if( apply_filters( 'wprtsp_general_meta', true ) ) {
         $settings = get_post_meta( $post->ID, '_socialproof', true );
+        $this->llog($settings);
         $show_on = $settings['general_show_on'];
         $post_ids = $settings['general_post_ids'];
         $duration = $settings['general_duration'];
@@ -494,10 +495,12 @@ class WPRTSP {
             $show_on = $meta['general_show_on'];
             switch($show_on) {
                 case '1':
-                    $social_proof_settings = $this->get_cpt_settings( $notification->ID );
-                    wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-                    wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                    wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
+                    if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
+                        $social_proof_settings = $this->get_cpt_settings( $notification->ID );
+                        wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
+                        wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
+                        wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
+                    }
                     break;
                 case '2': 
                     if(! is_array($post_ids)) {
@@ -509,10 +512,12 @@ class WPRTSP {
                         }
                     }
                     if( is_singular()  && in_array(get_the_ID(), $post_ids) ) {
-                        $social_proof_settings = $this->get_cpt_settings( $notification->ID );
-                        wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-                        wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                        wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ));
+                        if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
+                            $social_proof_settings = $this->get_cpt_settings( $notification->ID );
+                            wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
+                            wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
+                            wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ));
+                        }
                     }
                     break;
                 case '3':
@@ -526,10 +531,12 @@ class WPRTSP {
                             }
                         }
                         if(  ! is_singular() || (is_singular()  && ! in_array(get_the_ID(), $post_ids) ) ) {
-                            $social_proof_settings = $this->get_cpt_settings( $notification->ID );
-                            wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-                            wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                            wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
+                            if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
+                                $social_proof_settings = $this->get_cpt_settings( $notification->ID );
+                                wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
+                                wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
+                                wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
+                            }
                         }
                     break;
             }
@@ -561,6 +568,9 @@ class WPRTSP {
             'general_initial_popup_time' => apply_filters( 'wprtsp_general_initial_popup_time', (int) $meta['general_initial_popup_time'] ),
             'general_subsequent_popup_time' => apply_filters('wprtsp_general_subsequent_popup_time', (int) $meta['general_subsequent_popup_time'] )
         );
+        if($vars['conversions_sound_notification'] == false) {
+            $vars['conversions_sound_notification_markup'] = '';
+        }
         return $vars;
     }
 
