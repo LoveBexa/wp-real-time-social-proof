@@ -60,6 +60,19 @@ Ask away.
 
 == Changelog ==
 
+= 1.6 =
+Major revamp to the entire plugin. Please install and reconfigure the plugin to use new power-features.
+* Multiple notifications
+* Exclusion from posts / pages
+* More settings
+* Several updates and bugfixes
+
+= 1.5 =
+Added settings:
+* Sound notification
+* Popup position
+* Several updates and bugfixes
+
 = 1.4 =
 Added settings:
 * Show social proof across the site or individual pages
