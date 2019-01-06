@@ -1,12 +1,11 @@
-# WP-Real-Time-Social-Proof
-=== WP Real-Time Social-Proof ===
+﻿=== WP Real-Time Social-Proof ===
 Contributors: varun21, ruchikawp
-Tags: social proof, conversion, ctr, ecommerce, marketing, popup, woocommerce, easy digital downloads, newsletter, optin, signup, sales triggers
+Tags: social proof, live sales, recent sales notification, conversion, ctr, ecommerce, marketing, popup, woocommerce, easy digital downloads, newsletter, optin, signup, sales triggers
 Donate link: https://www.converticacommerce.com?item_name=DonationforWPRealTimeSocialProof&cmd=_xclick¤cy_code=USD&business=shivanand@converticacommerce.com
 Requires at least: 3.7.4
 Tested up to: 4.9.6
 Requires PHP: 7.0
-Stable tag: 1.0
+Stable tag: 1.5
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -36,17 +35,7 @@ WP Real Time Social Proof boosts your sales and conversions.
 Upload the plugin to your blog. Activate it. Visit Settings > Social Proof. Configure settings and verify working. Create s support thread in case of any issues.
 
 == Frequently Asked Questions ==
-Can you make it do this?
-Sure. Share your idea with me.
-
-It doesn't work.
-See if you've installed and configured it correctly. If you still have an issue please file an issue in the support forums here.
-
-I need direct support.
-You can reach me through my developer / WordPress Profile.
-
-What else can I ask?
-Don't ask. Just ask away.
+Ask away.
 
 == Screenshots ==
 1. screenshot1.png
@@ -54,5 +43,22 @@ Don't ask. Just ask away.
 3. screenshot3.png
 
 == Changelog ==
-1.0 Integration with WooCommerce and Easy Digital Downloads
-0.1 Initial release
+
+= 1.4 =
+Added settings:
+* Show social proof across the site or individual pages
+* Link the product name to product page for better CTR and conversion
+
+= 1.3 =
+Added settings:
+* Time for the initial popup to appear
+* Time for the subsequent popups to appear
+* Last 100 transactions will be pulled installed of the default 10
+* Disabled hiding of the popup when mouseover
+
+= 1.2 =
+Added integration for WooCommerce and Easy Digital Downloads
+
+= 0.2 =
+Initial release
+Generated records show name, transaction, location of the person. Times are intelligently generated using prime numbers for maximum CTR. Records are also pulled out of uniquely seed based random algorithm.
