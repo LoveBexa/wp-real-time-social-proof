@@ -5,7 +5,7 @@ Donate link: https://www.converticacommerce.com?item_name=DonationforWPRealTimeS
 Requires at least: 3.7.4
 Tested up to: 4.9.6
 Requires PHP: 7.0
-Stable tag: 1.5
+Stable tag: 1.6
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -42,6 +42,10 @@ A whole library of
 *  Customization Settings
 *  Verified sales badge
 *  And lots more in development
+
+== Upgrade Notice ==
+
+This is a major update. Please setup the plugin again to use the new features.
 
 == Installation ==
 Upload the plugin to your blog. Activate it. Visit Settings > Social Proof. Configure settings and verify working. Create s support thread in case of any issues.

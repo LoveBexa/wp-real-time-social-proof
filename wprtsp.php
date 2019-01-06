@@ -67,6 +67,17 @@ class WPRTSP {
         add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ));
         add_action( 'save_post', array($this, 'save_meta_box_data' ));
         add_action('wprtsp_general_meta_settings',array( __NAMESPACE__, 'wprtsppro_general_meta' ));
+        
+        add_action( 'in_plugin_update_message'. basename(__DIR__).'/'.basename(__FILE__), array($this, 'plugin_update_message'), 10, 2 );
+    }
+
+    function plugin_update_message( $data, $response ) {
+        if( isset( $data['upgrade_notice'] ) ) {
+            printf(
+                '<div class="update-message">%s</div>',
+                wpautop( '<strong>Alert!</strong> This is a major update. Please setup the plugin again to use the new powerful features!' )
+            );
+        }
     }
 
     function add_meta_boxes(){
@@ -75,16 +86,18 @@ class WPRTSP {
     }
 
     function cpt_defaults() {
+
         $defaults = array(
 
-                'general_show_on' => '2',
+                'general_show_on' => '1',
                 'general_duration' => '4',
                 'general_initial_popup_time' => '5',
-                'general_subsequent_popup_time' => '15',
+                'general_subsequent_popup_time' => '30',
+                'general_post_ids' => get_option( 'page_on_front'),
 
                 'conversions_enable' => 1,
                 'conversions_show_on_mobile' => 1,
-                'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'edd' : ( class_exists( 'WooCommerce' ) ?  'wooc' :  'generated' ),
+                'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ),
                 'conversions_transaction' => 'subscribed to the newsletter',
                 'conversions_transaction_alt' => 'registered for the webinar',
                 
@@ -106,7 +119,8 @@ class WPRTSP {
         wp_nonce_field( 'socialproof_meta_box_nonce', 'socialproof_meta_box_nonce' );
         if( apply_filters( 'wprtsp_general_meta', true ) ) {
         $settings = get_post_meta( $post->ID, '_socialproof', true );
-        $this->llog($settings);
+        //$this->llog($settings);
+        $settings = wp_parse_args ( $settings, $this->cpt_defaults());
         $show_on = $settings['general_show_on'];
         $post_ids = $settings['general_post_ids'];
         $duration = $settings['general_duration'];
@@ -187,6 +201,7 @@ class WPRTSP {
         if( apply_filters('wprtsp_conversions_meta', true) ) {
         $settings = get_post_meta($post->ID, '_socialproof', true);
         $defaults = $this->cpt_defaults();
+        $settings = wp_parse_args($settings, $defaults);
         $conversions_enable = $settings['conversions_enable'];
         $conversions_shop_type = $settings['conversions_shop_type'];
         $conversions_transaction = $settings['conversions_transaction'];
@@ -227,18 +242,18 @@ class WPRTSP {
                 </td>
             </tr>
             <tr>
-                <td><label for="wprtsp[conversions_shop_type]">Source</label></td>
-                <td><select id="wprtsp[conversions_shop_type]" name="wprtsp[conversions_shop_type]">
+                <td><label for="wprtsp_conversions_shop_type">Source</label></td>
+                <td><select id="wprtsp_conversions_shop_type" name="wprtsp[conversions_shop_type]">
                         <?php echo $sources_html; ?>
                     </select></td>
             </tr>
             <tr>
-                <td><label for="wprtsp[conversions_transaction]">Transaction 1 for Generated Records</label></td>
-                <td><input id="wprtsp[conversions_transaction]" name="wprtsp[conversions_transaction]" type="text" class="widefat" value="<?php echo $conversions_transaction ?>" /></td>
+                <td><label for="wprtsp_conversions_transaction">Transaction 1 for Generated Records</label></td>
+                <td><input id="wprtsp_conversions_transaction" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversions_transaction]" type="text" class="widefat" value="<?php echo $conversions_transaction ?>" /></td>
             </tr>
             <tr>
-                <td><label for="wprtsp[conversions_transaction_alt]">Transaction 2 for Generated Records</label></td>
-                <td><input id="wprtsp[conversions_transaction_alt]" name="wprtsp[conversions_transaction_alt]" type="text" class="widefat" value="<?php echo $conversions_transaction_alt ?>" /></td>
+                <td><label for="wprtsp_conversions_transaction_alt">Transaction 2 for Generated Records</label></td>
+                <td><input id="wprtsp_conversions_transaction_alt" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversions_transaction_alt]" type="text" class="widefat" value="<?php echo $conversions_transaction_alt ?>" /></td>
             </tr>
             <tr>
                 <td><label for="wprtsp[conversions_position]">Position</label></td>
@@ -251,6 +266,21 @@ class WPRTSP {
                 <td><input id="wprtsp[conversions_sound_notification]" name="wprtsp[conversions_sound_notification]" type="checkbox" value="1" <?php checked( $conversions_sound_notification, '1' , true); ?>/></td>
             </tr>
         </table>
+        <script type="text/javascript">
+        $( document ).ready(function() {
+            $('#wprtsp_conversions_shop_type').on('change',  function() {
+                if($('#wprtsp_conversions_shop_type').val() == 'Generated' ) {
+                    $('#wprtsp_conversions_transaction').removeAttr('readonly');
+                    $('#wprtsp_conversions_transaction_alt').removeAttr('readonly');
+                }
+                else {
+                    $('#wprtsp_conversions_transaction').attr('readonly', 'true');
+                    $('#wprtsp_conversions_transaction_alt').attr('readonly', 'true');
+                }
+            });
+        });
+        
+        </script>
         <?php
         }
         else {

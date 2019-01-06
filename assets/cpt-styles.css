@@ -16,13 +16,10 @@
 }
 
 #poststuff .hndle {
-    background: #7db9bb;
-    color: white;
     font-size: 1.618em;
 }
 
 .postbox .toggle-indicator:before {
-    color: white;
     margin-top: 12px;
 }
 
