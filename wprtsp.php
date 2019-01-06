@@ -49,9 +49,6 @@ class WPRTSP {
     function setup(){
         $this->dir = trailingslashit( plugin_dir_path( __FILE__ ) );
         $this->uri  = trailingslashit( plugin_dir_url(  __FILE__ ) );
-        //$this-llog( plugin_dir_path( __FILE__ ) );\
-        //print_r(plugin_dir_url( __FILE__ ) );
-        //die();
     }
 
     function includes(){
@@ -64,15 +61,12 @@ class WPRTSP {
         add_action( 'init', array( $this, 'register_post_types' ));
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'plugin_styles' ) );
-        
         add_filter( 'heartbeat_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged in users:
         add_filter( 'heartbeat_nopriv_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged out users
         add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_scripts'));
         add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ));
         add_action( 'save_post', array($this, 'save_meta_box_data' ));
-
         add_action('wprtsp_general_meta_settings',array( __NAMESPACE__, 'wprtsppro_general_meta' ));
-
     }
 
     function add_meta_boxes(){
@@ -110,10 +104,8 @@ class WPRTSP {
     function general_meta_box(){
         global $post;
         wp_nonce_field( 'socialproof_meta_box_nonce', 'socialproof_meta_box_nonce' );
-
-        if( apply_filters('wprtsp_general_meta', true) ) {
-        $settings = get_post_meta($post->ID, '_socialproof', true);
-        $this->llog($settings);
+        if( apply_filters( 'wprtsp_general_meta', true ) ) {
+        $settings = get_post_meta( $post->ID, '_socialproof', true );
         $show_on = $settings['general_show_on'];
         $post_ids = $settings['general_post_ids'];
         $duration = $settings['general_duration'];
@@ -133,7 +125,6 @@ class WPRTSP {
                         <option value="2" <?php selected( $show_on, 2 ); ?> >On selected posts / pages</option>
                         <option value="3" <?php selected( $show_on, 3 ); ?> >Everywhere except the following</option>
                     </select>
-                    <!-- <input type="radio" id="wprtsp_general_show_on1" name="wprtsp[general_show_on]" value="<?php echo $post_ids; ?>></td> -->
             </tr>
              <tr id="post_ids_selector">
                 <td><label for="wprtsp_general_post_ids">Enter Post Ids (comma separated)</label></td>
@@ -315,7 +306,7 @@ class WPRTSP {
         $settings['records'] = $this->generate_cpt_records($settings);
         $this->generate_edd_records();
         $this->generate_wooc_records();
-        $settings = wp_parse_args( $settings, $this->cpt_defaults() );
+        //$settings = wp_parse_args( $settings, $this->cpt_defaults() );
         update_post_meta( $post_id, '_socialproof', $settings );
     }
 
@@ -465,25 +456,24 @@ class WPRTSP {
         return $message;
     }
 
-    function send_generated_records($response, $data, $screen_id, $notification_id = 0) {
+    function send_generated_records( $response, $data, $screen_id, $notification_id = 0 ) {
         $response['wprtsp'] = 'this is a generated record';
-        $records = get_transient('wprtsp_' . $data['wprtsp']);
+        $records = get_transient( 'wprtsp_' . $data['wprtsp'] );
         $settings = \get_post_meta( $notification_id, '_socialproof', true );
-        
-        if($records) {
+        $settings = $settings['records'];
+        if( $records ) {
             $record = array_rand( array_diff_key( $settings, $records ));
             if(empty($record)) {
-                return;
+                return '';
             }
             $records[] = $record;
             set_transient('wprtsp_' . $data['wprtsp'], $records, 1 * HOUR_IN_SECONDS);
             $response['wprtsp'] = json_encode( $settings[$record] );
-            
         }
         else {
             $record = array_rand( $settings );
             if(empty($record)) {
-                return;
+                return '';
             }
             set_transient( 'wprtsp_' . $data['wprtsp'], array($record), 1 * HOUR_IN_SECONDS );
             $response['wprtsp'] = json_encode( $settings[$record] );
@@ -496,7 +486,7 @@ class WPRTSP {
         return $sec + $usec * 1000000;
     }
 
-    function enable_notifications(){
+    function enqueue_scripts(){
         $notifications  = \get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
         $active_notifications = array();
         foreach($notifications as $notification) {
@@ -574,13 +564,9 @@ class WPRTSP {
         return $vars;
     }
 
-    function enqueue_scripts(){
-        $this->enable_notifications();
-    }
-
     /* Add links below the plugin name on the plugins page */
     function plugin_action_links($links){
-        $links[] = '<a href="'. esc_url( get_admin_url(null, 'options-general.php?page=wprtsp') ) .'">Settings</a>';
+        $links[] = '<a href="https://www.converticacommerce.com/?item_name=Donate%20to%20WP%20Social%20Proof&cmd=_xclick&business=shivanand@converticacommerce.com"><strong style="display:inline">Donate</strong></a>';
         return $links;
     }
 
