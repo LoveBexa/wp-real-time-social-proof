@@ -64,10 +64,9 @@ class WPRTSP {
         add_action( 'init', array( $this, 'register_post_types' ));
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'plugin_styles' ) );
-        add_action( 'admin_menu', array( $this, 'settings_menu' ) );
-        add_action( 'admin_init', array($this, 'register_settings') );
-        add_filter( 'heartbeat_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged in users:
-        add_filter( 'heartbeat_nopriv_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged out users
+        
+        add_filter( 'heartbeat_received', array( $this,'respond_to_browser'), 10, 4 ); // Logged in users:
+        add_filter( 'heartbeat_nopriv_received', array( $this,'respond_to_browser'), 10, 4 ); // Logged out users
         add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_scripts'));
         add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ));
         add_action( 'save_post', array($this, 'save_meta_box_data' ));
@@ -89,7 +88,6 @@ class WPRTSP {
         }
     }
 
-
     function add_meta_boxes(){
         add_meta_box( 'social-proof-general', __( 'General', 'erm' ), array($this, 'general_meta_box'), 'socialproof', 'normal');
         add_meta_box( 'social-proof-conversions', __( 'Conversions', 'erm' ), array($this, 'conversions_meta_box'), 'socialproof', 'normal');
@@ -108,16 +106,20 @@ class WPRTSP {
                 'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'edd' : ( class_exists( 'WooCommerce' ) ?  'wooc' :  'generated' ),
                 'conversions_transaction' => 'subscribed to the newsletter',
                 'conversions_transaction_alt' => 'registered for the webinar',
-                //'conversions_records' => $this->generate_records(array('transaction' => 'subscribed to the newsletter', 'transaction_alt' => 'registered for the webinar')),
+                
                 'conversions_sound_notification' => 0,
                 'conversions_position' => 'bl',
                 
-                'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right')
+                'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right'),
+
+                /* Additional routines */
+                'conversions_records' => $this->generate_cpt_records(array('transaction' => 'subscribed to the newsletter', 'transaction_alt' => 'registered for the webinar')),
 
         );
 
         return apply_filters('wprtsp_cpt_defaults', $defaults);
     }
+
     function general_meta_box(){
         global $post;
         wp_nonce_field( 'socialproof_meta_box_nonce', 'socialproof_meta_box_nonce' );
@@ -184,19 +186,11 @@ class WPRTSP {
         <script type="text/javascript">
         $( document ).ready(function() {
             $('#wprtsp_general_show_on').on('change',  function() {
-                //alert($('#wprtsp_general_show_on').val());
-                //$('#post_ids_selector').slideToggle(400);
                 if($('#wprtsp_general_show_on').val() == 1 ) {
                     $('#wprtsp_general_post_ids').attr('readonly', 'true');
-                    //$('#post_ids_selector').fadeOut(400);
-                    //$('#post_ids_selector').hide(400);
-                    //$('#post_ids_selector').css('height', '0px');
                 }
                 else {
                     $('#wprtsp_general_post_ids').removeAttr('readonly');
-                    //$('#post_ids_selector').fadeIn(400);
-                    //$('#post_ids_selector').show(400);
-                    //$('#post_ids_selector').css('height', 'auto');
                 }
             });
         });
@@ -336,7 +330,8 @@ class WPRTSP {
         $this->generate_wooc_records();
         $settings = wp_parse_args( $settings, $this->cpt_defaults() );
         update_post_meta( $post_id, '_socialproof', $settings );
-
+        $this->llog($_POST);
+        die();
     }
 
     function get_global_locations( $setting ) {
@@ -405,7 +400,7 @@ class WPRTSP {
     /* Get the engine going */
     private function __construct() {}
 
-    function respond_to_browser($response, $data, $screen_id) {
+    function respond_to_browser($response, $data, $screen_id, $notification_id) {
         if ( isset( $data['wprtsp'] ) ) {
             $shop_type = $this->get_setting('shop_type');
             switch($shop_type) {
@@ -413,7 +408,7 @@ class WPRTSP {
                 break;
                 case 'wooc': return $this->send_wooc_records($response, $data, $screen_id);
                 break;
-                default: $response = $this->send_generated_records($response, $data, $screen_id);
+                default: $response = $this->send_generated_records($response, $data, $screen_id, $notification_id);
             }
         }
         return $response;
@@ -517,10 +512,15 @@ class WPRTSP {
         return $message;
     }
     
-    function send_generated_records($response, $data, $screen_id) {
+    function send_generated_records($response, $data, $screen_id, $notification_id = 0) {
         $response['wprtsp'] = 'this is a generated record';
         $records = get_transient('wprtsp_' . $data['wprtsp']);
-        $settings = $this->get_setting('records');
+        if($notification_id) {
+            $settings = \get_post_meta( $notification_id, '_socialproof', true );
+        }
+        else {
+            $settings = $this->get_setting('records');
+        }
         
         if($records) {
             $record = array_rand( array_diff_key( $settings, $records ));
@@ -552,18 +552,13 @@ class WPRTSP {
         $notifications  = \get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
         $active_notifications = array();
         foreach($notifications as $notification) {
-            $meta = \get_post_meta($notification->ID, '_socialproof', true);
+            $meta = \get_post_meta( $notification->ID, '_socialproof', true );
             
             $show_on = $meta['general_show_on'];
-            //$this->llog($show_on);
-            //die();
+
             switch($show_on) {
                 case '1':
-                    $social_proof_settings = $this->get_cpt_settings($meta);
-                    //$social_proof_settings = $this->get_cpt_settings( $social_proof_settings );
-                    //$this->llog('jsvars');
-                    //$this->llog($social_proof_settings);
-                    //die();
+                    $social_proof_settings = $this->get_cpt_settings( $meta, $notification->ID );
                     wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
                     wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
                     wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
@@ -578,10 +573,10 @@ class WPRTSP {
                         }
                     }
                     if( is_singular()  && in_array(get_the_ID(), $post_ids) ) {
-                        $social_proof_settings = $this->get_cpt_settings($meta);
+                        $social_proof_settings = $this->get_cpt_settings( $meta, $notification->ID );
                         wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
                         wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                        wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( array('url' => $this->uri, 'wprtsp_notification_style' => $this->wprtsp_notification_style, 'wprtsp_sound_notification' => $this->sound_notification ? true: false, 'wprtsp_sound_notification_markup' => $this->sound_notification_markup, 'wprtsp_text_style' => $this->wprtsp_text_style, 'wprtsp_action_style' => $this->wprtsp_action_style, 'style_box' => apply_filters('wprtsp_container_style', $this->style_box), 'shop_type' => $this->get_setting('shop_type'), 'initial_popup_time' => ( 1 * $this->get_setting('initial_popup_time') ), 'subsequent_popup_time' => ( 1 * $this->get_setting('subsequent_popup_time') ), ) ));
+                        wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ));
                     }
                     break;
                 case '3':
@@ -595,19 +590,18 @@ class WPRTSP {
                             }
                         }
                         if(  ! is_singular() || (is_singular()  && ! in_array(get_the_ID(), $post_ids) ) ) {
-                            $social_proof_settings = $this->get_cpt_settings($meta);
+                            $social_proof_settings = $this->get_cpt_settings( $meta, $notification->ID );
                             wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
                             wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                            wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( array('url' => $this->uri, 'wprtsp_notification_style' => $this->wprtsp_notification_style, 'wprtsp_sound_notification' => $this->sound_notification ? true: false, 'wprtsp_sound_notification_markup' => $this->sound_notification_markup, 'wprtsp_text_style' => $this->wprtsp_text_style, 'wprtsp_action_style' => $this->wprtsp_action_style, 'style_box' => apply_filters('wprtsp_container_style', $this->style_box), 'shop_type' => $this->get_setting('shop_type'), 'initial_popup_time' => ( 1 * $this->get_setting('initial_popup_time') ), 'subsequent_popup_time' => ( 1 * $this->get_setting('subsequent_popup_time') ), ) ));
+                            wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
                         }
                     break;
             }
         }
     }
 
-    function get_cpt_settings($meta){
-        //$this->llog('meta');
-        //$this->llog($meta);
+    function get_cpt_settings( $meta, $notification_id ){
+        
         $position = $meta['conversions_position'];
         $position_css = '';
         switch($position) {
@@ -618,6 +612,7 @@ class WPRTSP {
         }
 
         $vars = array(
+            'id' => (int) $notification_id,
             'url' => $this->uri,
             'conversions_container_style' => apply_filters( 'wprtsp_conversions_container_style', 'display:none; font-family: Helvetica, arial, sans-serif; font-size: 14px; max-width:90%; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background:white; padding: 1em 2.618em; box-shadow: 2px -1px 5px rgba(0,0,0,.15);' ),
             'conversions_notification_style' => apply_filters('wprtsp_conversions_notification_style', 'text-align: center; display: table; height: 32px; width: 32px; float: left; margin-right: .5em; margin-left: -1.618em; border-radius: 100%; text-indent:-9999px; background:url(' . $this->uri . 'assets/map.svg ) no-repeat center;' ),
@@ -630,49 +625,11 @@ class WPRTSP {
             'general_initial_popup_time' => apply_filters( 'wprtsp_general_initial_popup_time', (int) $meta['general_initial_popup_time'] ),
             'general_subsequent_popup_time' => apply_filters('wprtsp_general_subsequent_popup_time', (int) $meta['general_subsequent_popup_time'] )
         );
-
-        //$this->llog($vars);
-        //die();
         return $vars;
-        /*
-        $box_style = apply_filters('style_box', 'display:none; font-family: Helvetica, arial, sans-serif; font-size: 14px; max-width:90%; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background:white; padding: 1em 2.618em; box-shadow: 2px -1px 5px rgba(0,0,0,.15);');
-        $wprtsp_notification_style = apply_filters( 'wprtsp_notification_style', 'text-align: center; display: table; height: 32px; width: 32px; float: left; margin-right: .5em; margin-left: -1.618em; border-radius: 100%; text-indent:-9999px; background:url(' . $this->uri . 'assets/map.svg ) no-repeat center;');
-        $wprtsp_text_style = apply_filters( 'wprtsp_text_style', 'display:table; font-weight:bold; font-size: 14px; line-height: 1em;');
-        $wprtsp_action_style = apply_filters( 'wprtsp_action_style', 'margin-top: .5em; display: block; font-weight: 300; color: #aaa; font-size: 12px; line-height: 1em;' );
-        return array(
-            'box_style' => $box_style,
-            'wprtsp_notification_style' => $wprtsp_notification_style,
-            'wprtsp_text_style' => $wprtsp_text_style,
-            'wprtsp_action_style' => $wprtsp_action_style,
-        );
-        */
     }
 
     function enqueue_scripts(){
-        $show_on = $this->get_setting('show_on');
-        if($show_on == 2) { // Enqueue on selected pages only
-            $post_ids = $this->get_setting('post_ids');
-            if(! is_array($post_ids)) {
-                if(strpos($post_ids, ',') !== false ){
-                    $post_ids = explode(',', $post_ids);
-                }
-                else {
-                    $post_ids = array($post_ids);
-                }
-            }
-            if(  is_singular()  && in_array(get_the_ID(), $post_ids) ) {
-                wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-                wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtsp.js', array('heartbeat','jquery'), null, true);
-                wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( array('url' => $this->uri, 'wprtsp_notification_style' => $this->wprtsp_notification_style, 'wprtsp_sound_notification' => $this->sound_notification ? true: false, 'wprtsp_sound_notification_markup' => $this->sound_notification_markup, 'wprtsp_text_style' => $this->wprtsp_text_style, 'wprtsp_action_style' => $this->wprtsp_action_style, 'style_box' => apply_filters('wprtsp_container_style', $this->style_box), 'shop_type' => $this->get_setting('shop_type'), 'initial_popup_time' => ( 1 * $this->get_setting('initial_popup_time') ), 'subsequent_popup_time' => ( 1 * $this->get_setting('subsequent_popup_time') ), ) ));
-            }
-        }
-        if($show_on == 1) {
-            wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-            wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtsp.js', array('heartbeat','jquery'), null, true);
-            wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( array('url' => $this->uri, 'wprtsp_notification_style' => $this->wprtsp_notification_style, 'wprtsp_sound_notification' => $this->sound_notification ? true: false, 'wprtsp_sound_notification_markup' => $this->sound_notification_markup, 'wprtsp_text_style' => $this->wprtsp_text_style, 'wprtsp_action_style' => $this->wprtsp_action_style, 'style_box' => apply_filters('wprtsp_container_style', $this->style_box), 'shop_type' => $this->get_setting('shop_type'), 'initial_popup_time' => ( 1 * $this->get_setting('initial_popup_time') ), 'subsequent_popup_time' => ( 1 * $this->get_setting('subsequent_popup_time') ), ) ));
-        }
         $this->enable_notifications();
-        
     }
 
     /* Add links below the plugin name on the plugins page */
@@ -701,160 +658,10 @@ class WPRTSP {
         echo '</pre>';
     }
 
-    /* Add the settings menu to WP Admin */
-    function settings_menu(){
-        add_options_page('Social Proof', 'Social Proof', 'manage_options', 'wprtsp', array( $this, 'settings_page' ));
-    }
-
-    /* Render the settings page */
-    function settings_page(){ ?>
-        <div class="wrap">
-        <h1>WP Real-Time Social-Proof</h1>
-        <p>Real-time social-proof of actions users take on your site. Works with WooCommerce, EDD or randomly generated name. Data-import options coming soon.</p>
-        <div class="container" style="display: table; width: 100%; table-layout: fixed;">
-            <form method="post" action="options.php" style="display: table-cell; width: 100%;vertical-align: top">
-            <?php settings_fields( 'wprtsp' ); ?>
-            <?php do_settings_sections( 'wprtsp' ); ?>
-            <?php submit_button(); ?>
-            </form>
-            <div class="wprtsp_update" style="background: #f2d87e url(<?php echo $this->uri ?>assets/expression.jpg) no-repeat center top; background-size: contain; display: table-cell; width: 261px; vertical-align: top; border-top-left-radius:50px; border-bottom-right-radius:50px;"><div class="wprtsp_update_content" style="margin-top: 260px; padding: 1em; background-image: linear-gradient(to right,#f2d87e,#fea,#f2d87e);"><h3 style="line-height: 1.2em">It's all about credibility and subtly gaining attention to impress your message</h3><p><a href="https://wp-social-proof.com">WP Social Proof Pro</a> has more settings, custom animations, sound notifications, extra cards, custom popup positions, notifications in the browser tab. And there's lot's more… a whole library of</p><ol><li>Animations</li><li>Notification Sounds</li><li>Notification cards</li><li>Verified sales badge</li><li>And lots more in development</li></ol><p><strong>Get WP Social Proof Pro <a href="https://wp-social-proof.com">WP-Social-Proof.Com</a></strong> and get a cutting edge — <em>before your competitor does!</em></p></div></div>
-        </div>
-    <?php
-    }
-
-    function register_settings(){
-        register_setting('wprtsp', 'wprtsp', array( $this, 'sanitize' ));
-        
-        add_settings_section('wprtsp_main', 'Social Proof Settings', array($this,'main_section_text'), 'wprtsp');
-        add_settings_section('wprtsp_generated', 'Generated Records', array($this,'main_section_text'), 'wprtsp');        
-
-        add_settings_field('wprtsp_shop_type', 'Shop Type', array($this, 'wprtsp_shop_type_html'), 'wprtsp', 'wprtsp_main');
-        add_settings_field('wprtsp_link_product', 'Link to product page', array($this, 'wprtsp_link_html'), 'wprtsp', 'wprtsp_main');
-        add_settings_field('wprtsp_show_on', 'Where to show social proof', array($this,'wprtsp_show_on_html'), 'wprtsp', 'wprtsp_main');
-        add_settings_field('wprtsp_post_ids', 'Post Ids where social proof should show', array($this,'wprtsp_post_ids_string'), 'wprtsp', 'wprtsp_main');
-        add_settings_field('wprtsp_initial_popup_time', 'First appearance after these seconds', array($this,'wprtsp_initial_popup_time_string'), 'wprtsp', 'wprtsp_main');
-        add_settings_field('wprtsp_subsequent_popup_time', 'Appear every these many seconds', array($this,'wprtsp_subsequent_popup_time_string'), 'wprtsp', 'wprtsp_main');
-        add_settings_field('wprtsp_popup_position', 'Popup Position', array($this,'wprtsp_popup_position_html'), 'wprtsp', 'wprtsp_main');
-        add_settings_field('wprtsp_sound_notification', 'Sound Notification', array($this,'wprtsp_sound_notification_html'), 'wprtsp', 'wprtsp_main');
-        
-        add_settings_field('wprtsp_transaction', 'Primary action', array($this, 'wprtsp_transaction_string'), 'wprtsp', 'wprtsp_generated');
-        add_settings_field('wprtsp_transaction_alt', 'Secondary action', array($this,'wprtsp_transaction_alt_string'), 'wprtsp', 'wprtsp_generated');
-    }
-
-    function wprtsp_link_html(){
-    ?>
-    <input name="wprtsp[link_product]" type="checkbox" value="1" <?php checked( $this->get_setting('link_product'), '1', true); ?>/>
-    <?php
-    }
-
-    function wprtsp_sound_notification_html() {
-    ?>
-    <input name="wprtsp[sound_notification]" type="checkbox" value="1" <?php checked( $this->get_setting('sound_notification'), '1', true); ?>/>
-    <?php
-    }
-
-    function wprtsp_initial_popup_time_string(){ ?>
-        <select id="wprtsp_initial_popup_time_string" name="wprtsp[initial_popup_time]">
-        <option value="5" <?php selected( $this->get_setting('initial_popup_time'), 5 ); ?> >5</option>
-        <option value="15" <?php selected( $this->get_setting('initial_popup_time'), 15 ); ?> >15</option>
-        <option value="30" <?php selected( $this->get_setting('initial_popup_time'), 30 ); ?> >30</option>
-        <option value="60" <?php selected( $this->get_setting('initial_popup_time'), 60 ); ?> >60</option>
-        <option value="120" <?php selected( $this->get_setting('initial_popup_time'), 120 ); ?> >120</option>
-    </select>
-    <?php
-    }
-    
-    function wprtsp_subsequent_popup_time_string(){ ?>
-        <select id="wprtsp_subsequent_popup_time_string" name="wprtsp[subsequent_popup_time]">
-        <option value="5" <?php selected( $this->get_setting('subsequent_popup_time'), 5 ); ?> >5</option>
-        <option value="15" <?php selected( $this->get_setting('subsequent_popup_time'), 15 ); ?> >15</option>
-        <option value="30" <?php selected( $this->get_setting('subsequent_popup_time'), 30 ); ?> >30</option>
-        <option value="60" <?php selected( $this->get_setting('subsequent_popup_time'), 60 ); ?> >60</option>
-        <option value="120" <?php selected( $this->get_setting('subsequent_popup_time'), 120 ); ?> >120</option>
-        </select>
-        <?php
-    }
-
-    function wprtsp_shop_type_html() { 
-            if( class_exists('Easy_Digital_Downloads') ) { ?>
-            <label><input type="radio" name="wprtsp[shop_type]" value="edd" <?php checked('edd', $this->get_setting('shop_type'), true); ?>> Use Easy Digital Download purchases</label><br />
-            <?php
-            }
-            if( class_exists('WooCommerce') ) { ?>
-             <label><input type="radio" name="wprtsp[shop_type]" value="wooc" <?php checked('wooc', $this->get_setting('shop_type'), true); ?>> Use WooCommerce purchases</label><br />
-            <?php
-            } ?>
-            <label><input type="radio" name="wprtsp[shop_type]" value="generated" <?php checked('generated', $this->get_setting('shop_type'), true); ?>> Use generated records</label><br />
-    <?php
-    } 
-
-    function main_section_text(){
-        //echo '<p>Please provide the following.</p>';
-    }
-
-    function wprtsp_transaction_string(){
-        ?>
-        <p>Only applies when <strong>Use generated records</strong> is set.</p>
-        <input type="text" class="large-text" placeholder="subscribed to the newsletter" id="wprtsp_transaction_string" name="wprtsp[transaction]" type="text" value="<?php echo esc_attr( $this->get_setting('transaction')); ?>" />
-    <?php
-    }
-
-    function wprtsp_transaction_alt_string(){
-        ?>
-        <input type="text" class="large-text" placeholder="registered for the webinar" id="wprtsp_transaction_alt_string" name="wprtsp[transaction_alt]" type="text" value="<?php echo esc_attr( $this->get_setting('transaction_alt')); ?>" />
-        <p>User names / records will be generated automatically.</p>
-    <?php
-    }
-
-    function wprtsp_popup_position_html(){
-        ?>
-        <select id="wprtsp_popup_position" name="wprtsp[position]">
-        <option value="bl" <?php selected( $this->get_setting('position'), 'bl' ); ?> >Bottom Left</option>
-        <option value="br" <?php selected( $this->get_setting('position'), 'br' ); ?> >Bottom Right</option>
-    </select>
-        <?php
-        }
-
-    function wprtsp_show_on_html(){
-    ?>
-    <label><input type="radio" name="wprtsp[show_on]" value="1" <?php checked('1', $this->get_setting('show_on'), true); ?>>Entire Site</label>
-    <label><input type="radio" name="wprtsp[show_on]" value="2" <?php checked('2', $this->get_setting('show_on'), true); ?>>Selected Posts</label>
-    <?php
-    }
-
-    function wprtsp_post_ids_string(){
-        ?>
-        <input type="text" class="large-text" placeholder="post ids separated by comma" id="wprtsp_post_ids_string" name="wprtsp[post_ids]" type="text" value="<?php echo $this->get_setting('post_ids'); ?>" />
-    <?php
-    }
-
-    function wprtsp_polling_string(){
-        ?>
-        <input type="number" placeholder="Min: 15, max: 300" min="15" max="300" placeholder="seconds" id="wprtsp_polling_string" name="wprtsp[polling]" value="<?php echo esc_attr( $this->get_setting('polling')); ?>" />
-    <?php
-    }
-
     function get_setting( $setting ) {
         $defaults = $this->defaults();
         $settings = wp_parse_args( get_option( 'wprtsp', $defaults ), $defaults );
         return isset( $settings[ $setting ] ) ? $settings[ $setting ] : false;
-    }
-
-    function defaults() {
-        $defaults = array(
-            'shop_type' => class_exists('Easy_Digital_Downloads') ?  'edd' : ( class_exists( 'WooCommerce' ) ?  'wooc' :  'generated' ),
-            'transaction' => 'subscribed to the newsletter',
-            'transaction_alt' => 'registered for the webinar',
-            'show_on' => '1',
-            'link_product' => '1',
-            'sound_notification' => '0',
-            'position' => 'bl',
-            'post_ids' => get_option( 'page_on_front'),
-            'initial_popup_time' => '5',
-            'subsequent_popup_time' => '15',
-            'records' => $this->generate_records(array('transaction' => 'subscribed to the newsletter', 'transaction_alt' => 'registered for the webinar')),
-        );
-        return $defaults;
     }
 
     function sanitize( $settings ) {
@@ -867,9 +674,9 @@ class WPRTSP {
         return $settings;
     }
 
-    function generate_records($settings){
-        $transaction = $settings['transaction'];
-        $transaction_alt = $settings['transaction_alt'];
+    function generate_cpt_records($settings){
+        $transaction = $settings['conversions_transaction'];
+        $transaction_alt = $settings['conversions_transaction_alt'];
         $indexes = array();
         reset( $this->names );
         reset( $this->locations );
