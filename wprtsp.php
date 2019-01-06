@@ -65,27 +65,14 @@ class WPRTSP {
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'plugin_styles' ) );
         
-        add_filter( 'heartbeat_received', array( $this,'respond_to_browser'), 10, 4 ); // Logged in users:
-        add_filter( 'heartbeat_nopriv_received', array( $this,'respond_to_browser'), 10, 4 ); // Logged out users
+        add_filter( 'heartbeat_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged in users:
+        add_filter( 'heartbeat_nopriv_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged out users
         add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_scripts'));
         add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ));
         add_action( 'save_post', array($this, 'save_meta_box_data' ));
 
         add_action('wprtsp_general_meta_settings',array( __NAMESPACE__, 'wprtsppro_general_meta' ));
 
-        $styles = $this->get_style();
-        $this->style_box = $styles['box_style'];
-        $this->wprtsp_notification_style = $styles['wprtsp_notification_style'];
-        $this->wprtsp_text_style = $styles['wprtsp_text_style'];
-        $this->wprtsp_action_style = $styles['wprtsp_action_style'];
-
-        $this->sound_notification = $this->get_setting('sound_notification');
-        if($this->sound_notification) {
-            $this->sound_notification_markup = '<audio preload="auto" autoplay="true" src="'.$this->uri.'assets/sounds/unsure.mp3">Your browser does not support the <code>audio</code>element.</audio>';
-        }
-        else {
-            $this->sound_notification_markup = '';
-        }
     }
 
     function add_meta_boxes(){
@@ -113,7 +100,7 @@ class WPRTSP {
                 'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right'),
 
                 /* Additional routines */
-                'conversions_records' => $this->generate_cpt_records(array('transaction' => 'subscribed to the newsletter', 'transaction_alt' => 'registered for the webinar')),
+                'conversions_records' => $this->generate_cpt_records(array('conversions_transaction' => 'subscribed to the newsletter', 'conversions_transaction_alt' => 'registered for the webinar')),
 
         );
 
@@ -325,19 +312,11 @@ class WPRTSP {
 
         );
         
-        $settings['records'] = $this->generate_records($settings);
+        $settings['records'] = $this->generate_cpt_records($settings);
         $this->generate_edd_records();
         $this->generate_wooc_records();
         $settings = wp_parse_args( $settings, $this->cpt_defaults() );
         update_post_meta( $post_id, '_socialproof', $settings );
-        $this->llog($_POST);
-        die();
-    }
-
-    function get_global_locations( $setting ) {
-        
-        $settings =  get_option( 'wprtsp_global_locations', $defaults);
-        
     }
 
     function register_post_types(){
@@ -400,13 +379,16 @@ class WPRTSP {
     /* Get the engine going */
     private function __construct() {}
 
-    function respond_to_browser($response, $data, $screen_id, $notification_id) {
+    function respond_to_browser($response, $data, $screen_id) {
         if ( isset( $data['wprtsp'] ) ) {
-            $shop_type = $this->get_setting('shop_type');
+            $notification_id =  $data['wprtsp_notification_id'];
+            $shop_type = get_post_meta($notification_id, '_socialproof', true);
+            $shop_type = $shop_type['conversions_shop_type'];
+            
             switch($shop_type) {
-                case 'edd': $response = $this->send_edd_records($response, $data, $screen_id);
+                case 'Easy_Digital_Downloads': $response = $this->send_edd_records($response, $data, $screen_id, $notification_id);
                 break;
-                case 'wooc': return $this->send_wooc_records($response, $data, $screen_id);
+                case 'WooCommerce': return $this->send_wooc_records($response, $data, $screen_id, $notification_id);
                 break;
                 default: $response = $this->send_generated_records($response, $data, $screen_id, $notification_id);
             }
@@ -414,6 +396,41 @@ class WPRTSP {
         return $response;
     }
 
+    function send_edd_records($response, $data, $screen_id, $notification_id) {
+        $records = get_transient('wprtsp_edd_' . $data['wprtsp']);
+        $settings = get_transient('wprtsp_edd');
+        if(false === $settings) {
+            $settings = $this->generate_edd_records();
+        }
+        if($records) {
+            $record = array_shift(array_diff_key( array_keys($settings), $records ));
+            if(empty($record)) {
+                return;
+            }
+            $records[] = $record;
+            set_transient('wprtsp_edd_' . $data['wprtsp'], $records, 1 * HOUR_IN_SECONDS);
+            $response['wprtsp'] = json_encode( $this->get_edd_message($settings[$record], $notification_id) );
+        }
+        else {
+            $settings_clone = $settings; // we'll use array_shift but need to reuse the array; so clone it
+            $record = array_shift(array_keys( $settings_clone ));
+            if(empty($record)) {
+                return;
+            }
+            $records[] = $record;
+            set_transient('wprtsp_edd_' . $data['wprtsp'], array( $record ), 1 * HOUR_IN_SECONDS);
+            $response['wprtsp'] = json_encode( $this->get_edd_message($settings_clone[$record], $notification_id) );
+            }
+        return $response;
+    }
+
+    function get_edd_message($record, $notification_id) {
+        $settings = $this->get_cpt_settings($notification_id);
+        $message = $settings['conversions_sound_notification_markup'].'<span class="geo wprtsp_notification" style="'.$settings['conversions_notification_style'].'">Map</span><span class="wprtsp_text" style="'.$settings['conversions_text_style'].'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased <a href="'.$record['product_link'].'">' . $record['product'] . '</a><span class="action" style="'.$settings['conversions_action_style'].'"> ' . $record['time'] . ' ago</span></span>';    
+        
+        return $message;
+    }
+    
     function send_wooc_records($response, $data, $screen_id) {
         $records = get_transient('wprtsp_wooc_' . $data['wprtsp']);
         //$response['wprtsp'] = json_encode($records);
@@ -434,7 +451,6 @@ class WPRTSP {
             if(empty($record)) {
                 return;
             }
-            
             $records[] = $record;
             set_transient('wprtsp_wooc_' . $data['wprtsp'], $settings, 1 * HOUR_IN_SECONDS);
             $response['wprtsp'] = json_encode( $this->get_wooc_message($record) );
@@ -442,85 +458,17 @@ class WPRTSP {
         return $response;
     }
 
-    function get_style(){
-        $position = $this->get_setting('position');
-        switch($position) {
-            case 'bl': $position_css = 'bottom: 10px; left:10px';
-            break;
-            case 'br': $position_css = 'bottom: 10px; right:10px';
-            break;
-            
-        }
-        $box_style = apply_filters('style_box', 'display:none; font-family: Helvetica, arial, sans-serif; font-size: 14px; max-width:90%; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background:white; padding: 1em 2.618em; box-shadow: 2px -1px 5px rgba(0,0,0,.15);');
-        $wprtsp_notification_style = apply_filters( 'wprtsp_notification_style', 'text-align: center; display: table; height: 32px; width: 32px; float: left; margin-right: .5em; margin-left: -1.618em; border-radius: 100%; text-indent:-9999px; background:url(' . $this->uri . 'assets/map.svg ) no-repeat center;');
-        $wprtsp_text_style = apply_filters( 'wprtsp_text_style', 'display:table; font-weight:bold; font-size: 14px; line-height: 1em;');
-        $wprtsp_action_style = apply_filters( 'wprtsp_action_style', 'margin-top: .5em; display: block; font-weight: 300; color: #aaa; font-size: 12px; line-height: 1em;' );
-        return array(
-            'box_style' => $box_style,
-            'wprtsp_notification_style' => $wprtsp_notification_style,
-            'wprtsp_text_style' => $wprtsp_text_style,
-            'wprtsp_action_style' => $wprtsp_action_style,
-        );
-    }
-
     function get_wooc_message($record) {
+        $settings = $this->get_cpt_settings($notification_id);
+        $message = $settings['conversions_sound_notification_markup'].'<span class="geo wprtsp_notification" style="'.$settings['conversions_notification_style'].'">Map</span><span class="wprtsp_text" style="'.$settings['conversions_text_style'].'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased <a href="'.$record['product_link'].'">' . $record['product'] . '</a><span class="action" style="'.$settings['conversions_action_style'].'"> ' . $record['time'] . ' ago</span></span>';
         
-        if($this->get_setting('link_product')) {
-            $message = $this->sound_notification_markup.'<span class="geo wprtsp_notification" style="'.$this->wprtsp_notification_style.'">Map</span><span class="wprtsp_text" style="'.$this->wprtsp_text_style.'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased <a href="'.$record['product_link'].'">' . $record['product'] . '</a><span class="action" style="'.$this->wprtsp_action_style.'"> ' . $record['time'] . ' ago</span></span>';   
-        }
-        else {
-            $message = $this->sound_notification_markup.'<span class="geo wprtsp_notification" style="'.$this->wprtsp_notification_style.'">Map</span><span class="wprtsp_text" style="'.$this->wprtsp_text_style.'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased ' . $record['product'] . '<span class="action" style="'.$this->wprtsp_action_style.'"> ' . $record['time'] . ' ago</span></span>';
-        }
         return $message;
     }
 
-    function send_edd_records($response, $data, $screen_id) {
-        $records = get_transient('wprtsp_edd_' . $data['wprtsp']);
-        $settings = get_transient('wprtsp_edd');
-        if(false === $settings) {
-            $settings = $this->generate_edd_records();
-        }
-        if($records) {
-            $record = array_shift(array_diff_key( array_keys($settings), $records ));
-            if(empty($record)) {
-                return;
-            }
-            $records[] = $record;
-            set_transient('wprtsp_edd_' . $data['wprtsp'], $records, 1 * HOUR_IN_SECONDS);
-            $response['wprtsp'] = json_encode( $this->get_edd_message($settings[$record]) );
-        }
-        else {
-            $settings_clone = $settings; // we'll use array_shift but need to reuse the array; so clone it
-            $record = array_shift(array_keys( $settings_clone ));
-            if(empty($record)) {
-                return;
-            }
-            $records[] = $record;
-            set_transient('wprtsp_edd_' . $data['wprtsp'], array( $record ), 1 * HOUR_IN_SECONDS);
-            $response['wprtsp'] = json_encode( $this->get_edd_message($settings_clone[$record]) );
-            }
-        return $response;
-    }
-
-    function get_edd_message($record) {
-        if( $this->get_setting('link_product') ) {
-            $message = $this->sound_notification_markup.'<span class="geo wprtsp_notification" style="'.$this->wprtsp_notification_style.'">Map</span><span class="wprtsp_text" style="'.$this->wprtsp_text_style.'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased <a href="'.$record['product_link'].'">' . $record['product'] . '</a><span class="action" style="'.$this->wprtsp_action_style.'"> ' . $record['time'] . ' ago</span></span>';    
-        }
-        else {
-            $message = $this->sound_notification_markup.'<span class="geo wprtsp_notification" style="'.$this->wprtsp_notification_style.'">Map</span><span class="wprtsp_text" style="'.$this->wprtsp_text_style.'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased ' . $record['product'] . '<span class="action" style="'.$this->wprtsp_action_style.'"> ' . $record['time'] . ' ago</span></span>';
-        }
-        return $message;
-    }
-    
     function send_generated_records($response, $data, $screen_id, $notification_id = 0) {
         $response['wprtsp'] = 'this is a generated record';
         $records = get_transient('wprtsp_' . $data['wprtsp']);
-        if($notification_id) {
-            $settings = \get_post_meta( $notification_id, '_socialproof', true );
-        }
-        else {
-            $settings = $this->get_setting('records');
-        }
+        $settings = \get_post_meta( $notification_id, '_socialproof', true );
         
         if($records) {
             $record = array_rand( array_diff_key( $settings, $records ));
@@ -553,12 +501,10 @@ class WPRTSP {
         $active_notifications = array();
         foreach($notifications as $notification) {
             $meta = \get_post_meta( $notification->ID, '_socialproof', true );
-            
             $show_on = $meta['general_show_on'];
-
             switch($show_on) {
                 case '1':
-                    $social_proof_settings = $this->get_cpt_settings( $meta, $notification->ID );
+                    $social_proof_settings = $this->get_cpt_settings( $notification->ID );
                     wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
                     wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
                     wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
@@ -573,7 +519,7 @@ class WPRTSP {
                         }
                     }
                     if( is_singular()  && in_array(get_the_ID(), $post_ids) ) {
-                        $social_proof_settings = $this->get_cpt_settings( $meta, $notification->ID );
+                        $social_proof_settings = $this->get_cpt_settings( $notification->ID );
                         wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
                         wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
                         wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ));
@@ -590,7 +536,7 @@ class WPRTSP {
                             }
                         }
                         if(  ! is_singular() || (is_singular()  && ! in_array(get_the_ID(), $post_ids) ) ) {
-                            $social_proof_settings = $this->get_cpt_settings( $meta, $notification->ID );
+                            $social_proof_settings = $this->get_cpt_settings( $notification->ID );
                             wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
                             wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
                             wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
@@ -600,8 +546,8 @@ class WPRTSP {
         }
     }
 
-    function get_cpt_settings( $meta, $notification_id ){
-        
+    function get_cpt_settings( $notification_id ){
+        $meta = get_post_meta($notification_id, '_socialproof', true);
         $position = $meta['conversions_position'];
         $position_css = '';
         switch($position) {
@@ -675,6 +621,7 @@ class WPRTSP {
     }
 
     function generate_cpt_records($settings){
+        
         $transaction = $settings['conversions_transaction'];
         $transaction_alt = $settings['conversions_transaction_alt'];
         $indexes = array();
@@ -754,7 +701,7 @@ class WPRTSP {
             $customers[$purchase]['transaction'] = 'purchased';
             $customers[$purchase]['product'] = $item->get_name();
             $customers[$purchase]['product_link'] = get_permalink($item->get_product_id());
-            $time = new WC_DateTime( $order->get_date_completed() );
+            $time = new \WC_DateTime( $order->get_date_completed() );
             $customers[$purchase]['time'] = human_time_diff($time->getTimestamp());
         }
         return set_transient( 'wprtsp_wooc', $customers, 30 * MINUTE_IN_SECONDS);
