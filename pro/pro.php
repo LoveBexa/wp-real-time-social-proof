@@ -35,7 +35,8 @@ function wprtsppro_get_cpt_defaults($defaults = array()){
         'general_post_ids' => get_option( 'page_on_front'), // string
 
         'conversions_enable' => true, // bool
-        'conversions_show_on_mobile' => true, // bool
+        'conversions_enable_mob' => true, // bool
+
         'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ), // string
         'conversions_transaction' => 'subscribed to the newsletter', // string
         'conversions_transaction_alt' => 'registered for the webinar', // string
@@ -66,7 +67,8 @@ function wpsppro_sanitize( $request ) {
     $settings['general_post_ids'] = array_key_exists('general_post_ids' ,$request)? sanitize_text_field($request['general_post_ids'] ) : $defaults['general_post_ids'];
 
     $settings['conversions_enable'] = array_key_exists('conversions_enable' , $request) && $request['conversions_enable'] ? true : false;
-    $settings['conversions_show_on_mobile'] = array_key_exists('conversions_show_on_mobile' , $request) && $request['conversions_show_on_mobile'] ? true : false;
+    $settings['conversions_enable_mob'] = array_key_exists('conversions_enable_mob' , $request) && $request['conversions_enable_mob'] ? true : false;
+
     $settings['conversions_shop_type'] = array_key_exists('conversions_shop_type' ,$request)?sanitize_text_field($request['conversions_shop_type'] ) : $defaults['general_post_ids'];
     $settings['conversions_transaction'] = array_key_exists('conversions_transaction' , $request)? sanitize_text_field( $request['conversions_transaction'] ) : $defaults['conversions_transaction'];
     $settings['conversions_transaction_alt'] = array_key_exists('conversions_transaction_alt' , $request)? sanitize_text_field( $request['conversions_transaction_alt'] ) : $defaults['conversions_transaction_alt'];
@@ -177,6 +179,7 @@ function wpsppro_conversions_meta_box(){
     //llog($settings);
     //$settings = wp_parse_args($settings, $defaults);
     $conversions_enable = $settings['conversions_enable'];
+    $conversions_enable_mob = $settings['conversions_enable_mob'];
     $conversions_shop_type = $settings['conversions_shop_type'];
     $conversions_transaction = $settings['conversions_transaction'];
     $conversions_transaction_alt = $settings['conversions_transaction_alt'];
@@ -189,7 +192,8 @@ function wpsppro_conversions_meta_box(){
 
     $available_audio = '<select id="wprtsp_conversions_sound_notification_file" name="wprtsp[conversions_sound_notification_file]">';
     foreach ($files as $file ) {
-        $available_audio .= '<option value="'.$file.'" '. selected( $conversions_sound_notification_file, $file, false ) .'>'.ucwords(str_replace('-', ' ',explode('.', $file)[0])).'</option>';
+       
+        $available_audio .= '<option '. disabled( $conversions_sound_notification, false, false) .' value="'.$file.'" '. selected( $conversions_sound_notification_file, $file, false ) .'>'.ucwords(str_replace('-', ' ',explode('.', $file)[0])).'</option>';
     }
     $available_audio .= '</select>';
     
@@ -221,9 +225,15 @@ function wpsppro_conversions_meta_box(){
             </td>
         </tr>
         <tr>
-            <td><label for="wprtsp[conversions_enable]">Enable</label></td>
+            <td><label for="wprtsp[conversions_enable]">Enable on Desktop</label></td>
             <td>
                 <input id="wprtsp[conversions_enable]" name="wprtsp[conversions_enable]" type="checkbox" value="1" <?php checked( 1, $conversions_enable, true); ?>/>
+            </td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp[conversions_enable_mob]">Enable on Mobile</label></td>
+            <td>
+                <input id="wprtsp[conversions_enable_mob]" name="wprtsp[conversions_enable_mob]" type="checkbox" value="1" <?php checked( 1, $conversions_enable_mob, true); ?>/>
             </td>
         </tr>
         <tr>
@@ -247,8 +257,8 @@ function wpsppro_conversions_meta_box(){
                 </select></td>
         </tr>
         <tr>
-            <td><label for="wprtsp[conversions_sound_notification]">Enable Sound Notification</label></td>
-            <td><input id="wprtsp[conversions_sound_notification]" name="wprtsp[conversions_sound_notification]" type="checkbox" value="1" <?php checked( 1, $conversions_sound_notification, true); ?>/></td>
+            <td><label for="wprtsp_conversions_sound_notification">Enable Sound Notification</label></td>
+            <td><input id="wprtsp_conversions_sound_notification" name="wprtsp[conversions_sound_notification]" type="checkbox" value="1" <?php checked( 1, $conversions_sound_notification, true); ?>/></td>
         </tr>
         <tr>
             <td><label for="wprtsp_conversions_sound_notification_file">Choose Audio</label></td>
@@ -267,6 +277,30 @@ function wpsppro_conversions_meta_box(){
                 $('#wprtsp_conversions_transaction_alt').attr('readonly', 'true');
             }
         });
+        $('#wprtsp_conversions_sound_notification').change(function() {
+            if($('#wprtsp_conversions_sound_notification').prop('checked')) {
+                $('#wprtsp_conversions_sound_notification_file option').each(function(){
+                    if($(this).attr('disabled')) {
+                        $(this).removeAttr('disabled');
+                    }
+                });
+            }
+            else {
+                $('#wprtsp_conversions_sound_notification_file option').each(function(){
+                    if(! $(this).attr('selected')) {
+                        $(this).attr('disabled','true');
+                    }
+                });
+            }
+            //if($('#wprtsp_conversions_sound_notification').val() == 'Generated' ) {
+            //    $('#wprtsp_conversions_transaction').removeAttr('readonly');
+            //    $('#wprtsp_conversions_transaction_alt').removeAttr('readonly');
+            //}
+            //else {
+            //    $('#wprtsp_conversions_transaction').attr('readonly', 'true');
+            //    $('#wprtsp_conversions_transaction_alt').attr('readonly', 'true');
+            //}
+        });
         $('#conversions_audition_sound').click(function(){
             wprtsp_conversions_sound_preview = jQuery('#wprtsp_conversions_sound_preview').length ? jQuery('#wprtsp_conversions_sound_preview') : jQuery('<audio/>', {
                 id: 'wprtsp_conversions_sound_preview'
@@ -278,10 +312,9 @@ function wpsppro_conversions_meta_box(){
     
     </script>
     <?php
-    llog($settings);
 }
 
-function wpsppro_save_meta_box_data($post_id){
+function wpsppro_save_meta_box_data($post_id) {
     
     $wprtsp = WPRTSP::get_instance();
     

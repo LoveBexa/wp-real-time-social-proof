@@ -586,7 +586,7 @@ class WPRTSP {
         $vars = array(
             'id' => (int) $notification_id,
             'url' => $this->uri,
-            'conversions_container_style' => apply_filters( 'wprtsp_conversions_container_style', 'display:none; font-family: Helvetica, arial, sans-serif; font-size: 14px; max-width:90%; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background:white; padding: 1em 2.618em; box-shadow: 2px -1px 5px rgba(0,0,0,.15);' ),
+            'conversions_container_style' => apply_filters( 'wprtsp_conversions_container_style', 'display:none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; font-size: 14px; max-width:90%; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background:white; padding: 1em 2.618em; box-shadow: 2px -1px 5px rgba(0,0,0,.15);' ),
             'conversions_notification_style' => apply_filters('wprtsp_conversions_notification_style', 'text-align: center; display: table; height: 32px; width: 32px; float: left; margin-right: .5em; margin-left: -1.618em; border-radius: 100%; text-indent:-9999px; background:url(' . $this->uri . 'assets/map.svg ) no-repeat center;' ),
             'conversions_action_style' => apply_filters( 'wprtsp_conversions_action_style', 'margin-top: .5em; display: block; font-weight: 300; color: #aaa; font-size: 12px; line-height: 1em;' ),
             'conversions_text_style' => apply_filters( 'wprtsp_conversions_text_style', 'display:table; font-weight:bold; font-size: 14px; line-height: 1em;' ),
