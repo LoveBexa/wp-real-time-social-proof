@@ -22,7 +22,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace wprtsp;
+
 
 class WPRTSP {
 
@@ -40,8 +40,8 @@ class WPRTSP {
 		if ( is_null( $instance ) ) {
 			$instance = new self;
 			$instance->setup();
-			$instance->includes();
 			$instance->setup_actions();
+			$instance->includes();
 		}
 		return $instance;
     }
@@ -66,7 +66,7 @@ class WPRTSP {
         add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_scripts'));
         add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ));
         add_action( 'save_post', array($this, 'save_meta_box_data' ));
-        add_action('wprtsp_general_meta_settings',array( __NAMESPACE__, 'wprtsppro_general_meta' ));
+        add_action('wprtsp_general_meta_settings',array( $this, 'wprtsppro_general_meta' ));
         
         add_action( 'in_plugin_update_message'. basename(__DIR__).'/'.basename(__FILE__), array($this, 'plugin_update_message'), 10, 2 );
     }
@@ -86,7 +86,7 @@ class WPRTSP {
     }
 
     function cpt_defaults() {
-
+        
         $defaults = array(
 
                 'general_show_on' => '1',
@@ -120,7 +120,8 @@ class WPRTSP {
         if( apply_filters( 'wprtsp_general_meta', true ) ) {
         $settings = get_post_meta( $post->ID, '_socialproof', true );
         //$this->llog($settings);
-        $settings = wp_parse_args ( $settings, $this->cpt_defaults());
+        $defaults = $this->cpt_defaults();
+        $settings = wp_parse_args( $settings, $defaults );
         $show_on = $settings['general_show_on'];
         $post_ids = $settings['general_post_ids'];
         $duration = $settings['general_duration'];
@@ -187,7 +188,6 @@ class WPRTSP {
                 }
             });
         });
-        
         </script>
         <?php
         }
@@ -289,7 +289,7 @@ class WPRTSP {
     }
 
     function save_meta_box_data($post_id){
-
+        
         if ( ! isset( $_POST['socialproof_meta_box_nonce'] ) ||
             ! wp_verify_nonce( $_POST['socialproof_meta_box_nonce'], 'socialproof_meta_box_nonce' ) ) {
             return;
@@ -303,7 +303,6 @@ class WPRTSP {
             return;
         }
 
-        
         $general_show_on = sanitize_text_field($_POST['wprtsp']['general_show_on']);
         $general_duration = sanitize_text_field($_POST['wprtsp']['general_duration']);
         $general_initial_popup_time = sanitize_text_field($_POST['wprtsp']['general_initial_popup_time']);
@@ -333,7 +332,7 @@ class WPRTSP {
             'conversions_position' => $conversions_position,
 
         );
-        
+        $settings = apply_filters('wprtsp_cpt_update_settings', $settings);
         $settings['records'] = $this->generate_cpt_records($settings);
         $this->generate_edd_records();
         $this->generate_wooc_records();
@@ -356,7 +355,7 @@ class WPRTSP {
             'view_items'            => __( 'view_items',              'erm' ),
             'search_items'          => __( 'search_items',            'erm' ),
             'not_found'             => __( 'No notificatins found',          'erm' ),
-            'not_found_in_trash'    => __( 'not_found_in_trash', 'erm' ),
+            'not_found_in_trash'    => __( 'No notificatins in Trash', 'erm' ),
             'all_items'             => __( 'All Notifications',                   'erm' ),
             'featured_image'        => __( 'featured_image',                   'erm' ),
             'set_featured_image'    => __( 'set_featured_image',               'erm' ),
@@ -518,10 +517,10 @@ class WPRTSP {
     }
 
     function enqueue_scripts(){
-        $notifications  = \get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
+        $notifications  = get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
         $active_notifications = array();
         foreach($notifications as $notification) {
-            $meta = \get_post_meta( $notification->ID, '_socialproof', true );
+            $meta = get_post_meta( $notification->ID, '_socialproof', true );
             $show_on = $meta['general_show_on'];
             switch($show_on) {
                 case '1':
@@ -592,7 +591,8 @@ class WPRTSP {
             'conversions_action_style' => apply_filters( 'wprtsp_conversions_action_style', 'margin-top: .5em; display: block; font-weight: 300; color: #aaa; font-size: 12px; line-height: 1em;' ),
             'conversions_text_style' => apply_filters( 'wprtsp_conversions_text_style', 'display:table; font-weight:bold; font-size: 14px; line-height: 1em;' ),
             'conversions_sound_notification' => apply_filters('wprtsp_conversions_sound_notification', ( $meta['conversions_sound_notification'] == '1' ) ? true : false),
-            'conversions_sound_notification_markup' => apply_filters( 'wprtsp_conversions_sound_notification_markup','<audio preload="auto" autoplay="true" src="' . $this->uri .'assets/sounds/unsure.mp3">Your browser does not support the <code>audio</code>element.</audio>'),
+            'conversions_sound_notification_markup' => apply_filters( 'wprtsp_conversions_sound_notification_markup','<audio preload="auto" autoplay="true" src="' . $this->uri .'assets/sounds/unsure.mp3">Your browser does not support the <code>audio</code>element.</audio>', $meta),
+            'conversions_sound_notification_file' => apply_filters( 'wprtsp__sound_notification_file',$this->uri .'assets/sounds/unsure.mp3', $meta),
             'conversions_shop_type' => apply_filters( 'wprtsp_conversions_shop_type', $meta['conversions_shop_type'] ),
             'general_duration' => apply_filters( 'wprtsp_general_duration', (int) $meta['general_duration'] ),
             'general_initial_popup_time' => apply_filters( 'wprtsp_general_initial_popup_time', (int) $meta['general_initial_popup_time'] ),
@@ -624,7 +624,7 @@ class WPRTSP {
     }
 
     /* Outputs any variable / php objects / arrays in a clear visible frmat */
-    function llog($str) {
+    static function llog($str) {
         echo '<pre>';
         print_r($str);
         echo '</pre>';
@@ -701,7 +701,7 @@ class WPRTSP {
         if( ! class_exists('WooCommerce') ) {
             return false;
         }
-        $query = new \WC_Order_Query( array(
+        $query = new WC_Order_Query( array(
             'limit' => 100,
             'orderby' => 'date',
             'order' => 'DESC',
@@ -711,7 +711,7 @@ class WPRTSP {
         $orders = $query->get_orders();
         $customers = array();
         foreach($orders as $purchase) {
-            $order = \wc_get_order($purchase);
+            $order = wc_get_order($purchase);
             
             $user = $order->get_user();
             if(!empty($user)) {
@@ -727,7 +727,7 @@ class WPRTSP {
             $customers[$purchase]['transaction'] = 'purchased';
             $customers[$purchase]['product'] = $item->get_name();
             $customers[$purchase]['product_link'] = get_permalink($item->get_product_id());
-            $time = new \WC_DateTime( $order->get_date_completed() );
+            $time = new WC_DateTime( $order->get_date_completed() );
             $customers[$purchase]['time'] = human_time_diff($time->getTimestamp());
         }
         return set_transient( 'wprtsp_wooc', $customers, 30 * MINUTE_IN_SECONDS);
@@ -737,6 +737,5 @@ class WPRTSP {
 function wprtsp() {
 	return WPRTSP::get_instance();
 }
-
 // Let's roll!
 wprtsp();

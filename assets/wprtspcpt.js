@@ -8,14 +8,14 @@ if (jQuery) {
             id: 'wprtsp_audio',
             class: 'wprtsp_audio',
             preload: 'auto',
-            src: `${wprtsp_settings.url}assets/sounds/unsure.mp3`
+            src: wprtsp_settings.conversions_sound_notification_file
         }).appendTo('body');
         }
         wp.heartbeat.interval(wprtsp_settings.general_initial_popup_time);
         new Fingerprint2().get(function (result, components) {
             jQuery(document).on('heartbeat-send', function (e, data) {
                 data['wprtsp'] = result + '_' + time;
-                console.log(data['wprtsp']);
+                //console.log(data['wprtsp']);
                 data['wprtsp_notification_id'] = wprtsp_settings.id;
             });
         })
@@ -47,12 +47,14 @@ if (jQuery) {
                     } else {
                         when = prime2.shift();
                     }
+                    //console.log(wprtsp_settings);
                     var html = `${wprtsp_settings.conversions_sound_notification_markup}<span class="geo wpsrtp_notification" style="${wprtsp_settings.conversions_notification_style}">Map</span><span class="wprtsp_text" style="${wprtsp_settings.conversions_text_style}"><span class="wprtsp_name">${result.first_name}</span> from <span class="wprtsp_location">${result.location.city}, ${result.location.state}</span> <span class="wprtsp_action" style="${wprtsp_settings.conversions_action_style}">${result.transaction} ${when} minutes ago</span></span>`;
 
                     wprtsp_pop.html(html).slideDown(200).delay( wprtsp_settings.general_duration * 1000 ).fadeOut(2000);
                 }
                 if (wprtsp_settings.conversions_shop_type == 'Easy_Digital_Downloads' || wprtsp_settings.conversions_shop_type == 'WooCommerce') {
-                    wprtsp_pop.html(result).slideDown(200).delay( wprtsp_settings.general_duration * 1000 ).fadeOut(2000);
+                   
+                    wprtsp_pop.html( wprtsp_settings.conversions_sound_notification_markup + result ).slideDown(200).delay( wprtsp_settings.general_duration * 1000 ).fadeOut(2000);
                 }
             }
             jQuery('#wprtsp_pop').mouseover(function () {

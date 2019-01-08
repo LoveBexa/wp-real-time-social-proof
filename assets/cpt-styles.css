@@ -2,11 +2,12 @@
     padding: 0.618em;
 }
 
-.wprtsp_tbl h4{
+.wprtsp_tbl h4 {
     margin-bottom: 0;
 }
 
-.wprtsp_tbl select, .wprtsp_tbl input {
+.wprtsp_tbl select,
+.wprtsp_tbl input {
     padding: 0.618em;
 }
 
@@ -25,4 +26,20 @@
 
 #post_ids_selector {
     transition: all 1s linear;
+}
+
+#social-proof-pro-general .hndle {
+    background: #0095ff;
+    color: #fff;
+}
+
+#social-proof-pro-general .handlediv .toggle-indicator:before,
+#social-proof-pro-conversions .handlediv .toggle-indicator:before {
+    color: #fff;
+    margin-top: 12px;
+}
+
+#social-proof-pro-conversions .hndle {
+    background: #ffbf00;
+    color: #fff;
 }
