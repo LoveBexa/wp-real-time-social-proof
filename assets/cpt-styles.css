@@ -43,3 +43,13 @@
     background: #ffbf00;
     color: #fff;
 }
+
+#conversions_audition_sound:before{
+    display:inline-block;
+    background: #0095ff;
+    color: white;
+    border-radius: 100px;
+    font-size: 40px;
+    margin-left: 1em;
+    cursor: pointer
+}

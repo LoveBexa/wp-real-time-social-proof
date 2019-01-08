@@ -252,7 +252,7 @@ function wpsppro_conversions_meta_box(){
         </tr>
         <tr>
             <td><label for="wprtsp_conversions_sound_notification_file">Choose Audio</label></td>
-            <td><?php echo $available_audio; ?></td>
+            <td><?php echo $available_audio; ?><span id="conversions_audition_sound" class="dashicons-arrow-right dashicons"></span></td>
         </tr>
     </table>
     <script type="text/javascript">
@@ -266,6 +266,13 @@ function wpsppro_conversions_meta_box(){
                 $('#wprtsp_conversions_transaction').attr('readonly', 'true');
                 $('#wprtsp_conversions_transaction_alt').attr('readonly', 'true');
             }
+        });
+        $('#conversions_audition_sound').click(function(){
+            wprtsp_conversions_sound_preview = jQuery('#wprtsp_conversions_sound_preview').length ? jQuery('#wprtsp_conversions_sound_preview') : jQuery('<audio/>', {
+                id: 'wprtsp_conversions_sound_preview'
+            }).appendTo('body');
+            jQuery('#wprtsp_conversions_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_conversions_sound_notification_file').val());
+            document.getElementById("wprtsp_conversions_sound_preview").play(); 
         });
     });
     
