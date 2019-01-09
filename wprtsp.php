@@ -22,7 +22,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
+define( 'EDD_SL_STORE_URL', 'https://wp-social-proof.com' );
 
 class WPRTSP {
 
@@ -590,6 +590,7 @@ class WPRTSP {
             'conversions_notification_style' => apply_filters('wprtsp_conversions_notification_style', 'text-align: center; display: table; height: 32px; width: 32px; float: left; margin-right: .5em; margin-left: -1.618em; border-radius: 100%; text-indent:-9999px; background:url(' . $this->uri . 'assets/map.svg ) no-repeat center;' ),
             'conversions_action_style' => apply_filters( 'wprtsp_conversions_action_style', 'margin-top: .5em; display: block; font-weight: 300; color: #aaa; font-size: 12px; line-height: 1em;' ),
             'conversions_text_style' => apply_filters( 'wprtsp_conversions_text_style', 'display:table; font-weight:bold; font-size: 14px; line-height: 1em;' ),
+            'conversions_title_notification' => apply_filters('wprtsp_conversions_title_notification', ( $meta['conversions_title_notification'] == '1' ) ? true : false),
             'conversions_sound_notification' => apply_filters('wprtsp_conversions_sound_notification', ( $meta['conversions_sound_notification'] == '1' ) ? true : false),
             'conversions_sound_notification_markup' => apply_filters( 'wprtsp_conversions_sound_notification_markup','<audio preload="auto" autoplay="true" src="' . $this->uri .'assets/sounds/unsure.mp3">Your browser does not support the <code>audio</code>element.</audio>', $meta),
             'conversions_sound_notification_file' => apply_filters( 'wprtsp__sound_notification_file',$this->uri .'assets/sounds/unsure.mp3', $meta),

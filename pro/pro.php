@@ -18,6 +18,14 @@ function wprtspro_conversions_sound_notification_markup($markup, $settings){
     return '<audio preload="auto" autoplay="true" src="' .  $wprtsp->uri .'pro/sounds/'.$settings['conversions_sound_notification_file'].'">Your browser does not support the <code>audio</code>element.</audio>';
 }
 
+function wpsppro_add_meta_boxes(){
+    add_meta_box( 'social-proof-pro-general', __( 'General Settings', 'erm' ), 'wpsppro_general_meta_box', 'socialproof', 'normal');
+    add_meta_box( 'social-proof-pro-conversions', __( 'Recent Conversions', 'erm' ), 'wpsppro_conversions_meta_box', 'socialproof', 'normal');
+    add_meta_box( 'social-proof-pro-live', __( 'Live Visitors', 'erm' ), 'wpsppro_live_meta_box', 'socialproof', 'normal');
+    add_meta_box( 'social-proof-pro-hot-stats', __( 'Hot Stats', 'erm' ), 'wpsppro_hot_stats_meta_box', 'socialproof', 'normal');
+    add_meta_box( 'social-proof-pro-custom-message', __( 'Custom Calls To Actions', 'erm' ), 'wpsppro_custom_info_meta_box', 'socialproof', 'normal');
+}
+
 function wprtspro_sound_notification_file($file, $settings){
     $wprtsp = WPRTSP::get_instance();
     return $wprtsp->uri .'pro/sounds/'.$settings['conversions_sound_notification_file'];
@@ -45,6 +53,8 @@ function wprtsppro_get_cpt_defaults($defaults = array()){
         'conversions_sound_notification_file' => 'salient.mp3', // string
         'conversions_position' => 'bl', // select
         
+        'conversions_title_notification' => false, // bool
+
         'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right', 'c' => 'Center'),
         'badge' => true, // bool
 
@@ -54,7 +64,6 @@ function wprtsppro_get_cpt_defaults($defaults = array()){
 
     return $defaults;
 }
-
 
 function wpsppro_sanitize( $request ) {
     $defaults = wprtsppro_get_cpt_defaults();
@@ -68,6 +77,7 @@ function wpsppro_sanitize( $request ) {
 
     $settings['conversions_enable'] = array_key_exists('conversions_enable' , $request) && $request['conversions_enable'] ? true : false;
     $settings['conversions_enable_mob'] = array_key_exists('conversions_enable_mob' , $request) && $request['conversions_enable_mob'] ? true : false;
+    $settings['conversions_title_notification'] = array_key_exists('conversions_title_notification' , $request) && $request['conversions_title_notification'] ? true : false;
 
     $settings['conversions_shop_type'] = array_key_exists('conversions_shop_type' ,$request)?sanitize_text_field($request['conversions_shop_type'] ) : $defaults['general_post_ids'];
     $settings['conversions_transaction'] = array_key_exists('conversions_transaction' , $request)? sanitize_text_field( $request['conversions_transaction'] ) : $defaults['conversions_transaction'];
@@ -77,13 +87,10 @@ function wpsppro_sanitize( $request ) {
     $settings['conversions_sound_notification_file'] = array_key_exists('conversions_sound_notification_file' ,$request) ? sanitize_text_field($request['conversions_sound_notification_file'] ) : $defaults['conversions_sound_notification_file'];
     $settings['badge'] = array_key_exists('badge' , $request) && $request['badge'] ? true : false;
 
+    $settings['ctas'] = array_key_exists('ctas', $request)? $request['ctas']: array();
+
     //$settings['conversions_records'] = array_key_exists('conversions_records');
     return $settings;
-}
-
-function wpsppro_add_meta_boxes(){
-    add_meta_box( 'social-proof-pro-general', __( 'General', 'erm' ), 'wpsppro_general_meta_box', 'socialproof', 'normal');
-    add_meta_box( 'social-proof-pro-conversions', __( 'Conversions', 'erm' ), 'wpsppro_conversions_meta_box', 'socialproof', 'normal');
 }
 
 function wpsppro_general_meta_box(){
@@ -93,7 +100,10 @@ function wpsppro_general_meta_box(){
     wp_nonce_field( 'socialproof_meta_box_nonce', 'socialproof_meta_box_nonce' );
     if( apply_filters( 'wprtsp_general_meta', true ) ) {
     $settings = get_post_meta( $post->ID, '_socialproof', true );
-    //llog($settings);
+    if(! $settings) {
+        $settings = wprtsppro_get_cpt_defaults();
+    }
+    $settings = wpsppro_sanitize($settings);
     $show_on = $settings['general_show_on'];
     $post_ids = $settings['general_post_ids'];
     $duration = $settings['general_duration'];
@@ -173,13 +183,16 @@ function wpsppro_conversions_meta_box(){
     $wprtsp = WPRTSP::get_instance();
 
     $settings = get_post_meta($post->ID, '_socialproof', true);
-    //llog($settings);
+    if(! $settings) {
+        $settings = wprtsppro_get_cpt_defaults();
+    }
     $defaults = wprtsppro_get_cpt_defaults();
     $settings = wpsppro_sanitize($settings);
     //llog($settings);
     //$settings = wp_parse_args($settings, $defaults);
     $conversions_enable = $settings['conversions_enable'];
     $conversions_enable_mob = $settings['conversions_enable_mob'];
+    $conversions_title_notification = $settings['conversions_title_notification'];
     $conversions_shop_type = $settings['conversions_shop_type'];
     $conversions_transaction = $settings['conversions_transaction'];
     $conversions_transaction_alt = $settings['conversions_transaction_alt'];
@@ -221,7 +234,7 @@ function wpsppro_conversions_meta_box(){
     <table id="tbl_conversions" class="wprtsp_tbl wprtsp_tbl_conversions">
         <tr>
             <td colspan="2">
-                <h3>Conversions</h3>
+                <h3>Show recent conversions to visitors</h3>
             </td>
         </tr>
         <tr>
@@ -237,6 +250,24 @@ function wpsppro_conversions_meta_box(){
             </td>
         </tr>
         <tr>
+            <td><label for="wprtsp[conversions_position]">Position</label></td>
+            <td><select id="wprtsp[conversions_position]" name="wprtsp[conversions_position]">
+                    <?php echo $positions_html; ?>
+                </select></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_conversions_title_notification">Enable Title Notification</label></td>
+            <td><input id="wprtsp_conversions_title_notification" name="wprtsp[conversions_title_notification]" type="checkbox" value="1" <?php checked( 1, $conversions_title_notification, true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_conversions_sound_notification">Enable Sound Notification</label></td>
+            <td><input id="wprtsp_conversions_sound_notification" name="wprtsp[conversions_sound_notification]" type="checkbox" value="1" <?php checked( 1, $conversions_sound_notification, true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_conversions_sound_notification_file">Choose Audio</label></td>
+            <td><?php echo $available_audio; ?><span id="conversions_audition_sound" class="dashicons-arrow-right dashicons"></span></td>
+        </tr>
+        <tr>
             <td><label for="wprtsp_conversions_shop_type">Source</label></td>
             <td><select id="wprtsp_conversions_shop_type" name="wprtsp[conversions_shop_type]">
                     <?php echo $sources_html; ?>
@@ -249,20 +280,6 @@ function wpsppro_conversions_meta_box(){
         <tr>
             <td><label for="wprtsp_conversions_transaction_alt">Transaction 2 for Generated Records</label></td>
             <td><input id="wprtsp_conversions_transaction_alt" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversions_transaction_alt]" type="text" class="widefat" value="<?php echo $conversions_transaction_alt ?>" /></td>
-        </tr>
-        <tr>
-            <td><label for="wprtsp[conversions_position]">Position</label></td>
-            <td><select id="wprtsp[conversions_position]" name="wprtsp[conversions_position]">
-                    <?php echo $positions_html; ?>
-                </select></td>
-        </tr>
-        <tr>
-            <td><label for="wprtsp_conversions_sound_notification">Enable Sound Notification</label></td>
-            <td><input id="wprtsp_conversions_sound_notification" name="wprtsp[conversions_sound_notification]" type="checkbox" value="1" <?php checked( 1, $conversions_sound_notification, true); ?>/></td>
-        </tr>
-        <tr>
-            <td><label for="wprtsp_conversions_sound_notification_file">Choose Audio</label></td>
-            <td><?php echo $available_audio; ?><span id="conversions_audition_sound" class="dashicons-arrow-right dashicons"></span></td>
         </tr>
     </table>
     <script type="text/javascript">
@@ -292,19 +309,16 @@ function wpsppro_conversions_meta_box(){
                     }
                 });
             }
-            //if($('#wprtsp_conversions_sound_notification').val() == 'Generated' ) {
-            //    $('#wprtsp_conversions_transaction').removeAttr('readonly');
-            //    $('#wprtsp_conversions_transaction_alt').removeAttr('readonly');
-            //}
-            //else {
-            //    $('#wprtsp_conversions_transaction').attr('readonly', 'true');
-            //    $('#wprtsp_conversions_transaction_alt').attr('readonly', 'true');
-            //}
         });
         $('#conversions_audition_sound').click(function(){
             wprtsp_conversions_sound_preview = jQuery('#wprtsp_conversions_sound_preview').length ? jQuery('#wprtsp_conversions_sound_preview') : jQuery('<audio/>', {
                 id: 'wprtsp_conversions_sound_preview'
             }).appendTo('body');
+            if( ! $('#wprtsp_conversions_sound_notification').prop('checked')) {
+                alert('Cannot play sound if Sound Notification is unchecked.');
+                return;
+            }
+            
             jQuery('#wprtsp_conversions_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_conversions_sound_notification_file').val());
             document.getElementById("wprtsp_conversions_sound_preview").play(); 
         });
@@ -312,6 +326,80 @@ function wpsppro_conversions_meta_box(){
     
     </script>
     <?php
+}
+
+function wpsppro_live_meta_box(){
+    ?>Show number of live visitors.<?php
+}
+
+function wpsppro_hot_stats_meta_box(){
+    ?>Conversion Milestones: Show number of conversions that happened over a period of time.<?php
+}
+
+function wpsppro_custom_info_meta_box(){
+    global $post;
+    $wprtsp = WPRTSP::get_instance();
+
+    $settings = get_post_meta($post->ID, '_socialproof', true);
+    if(! $settings) {
+        $settings = wprtsppro_get_cpt_defaults();
+    }
+    $defaults = wprtsppro_get_cpt_defaults();
+    $settings = wpsppro_sanitize($settings);
+    $ctas = $settings['ctas'];
+    ?>Add custom calls to action such as offers, discount coupons etc.
+    
+    <table id="ctas-fieldset-one" width="100%">
+        <thead>
+            <tr>
+                <th width="40%">Message</th>
+                <th width="8%"></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php
+        if ( $ctas ) {
+            foreach ( $ctas as $cta ) {
+                if( ! empty($cta) ) { ?>
+                <tr>
+                    <td><input type="text" class="widefat" name="wprtsp[ctas][]" value="<?php if($cta != '') echo esc_attr( $cta ); ?>" /></td>
+                    <td><a class="button remove-row" href="#">Remove</a></td>
+                </tr>
+                <?php
+                }
+            }
+        }
+        else { ?>
+                <tr>
+                    <td><input type="text" class="widefat" name="wprtsp[ctas][]" /></td>
+                    <td><a class="button remove-row" href="#">Remove</a></td>
+                </tr>
+                <?php 
+        }
+        ?>
+            <!-- empty hidden one for jQuery -->
+            <tr class="empty-row screen-reader-text">
+                <td><input type="text" class="widefat" name="wprtsp[ctas][]" /></td>
+                <td><a class="button remove-row" href="#">Remove</a></td>
+            </tr>
+        </tbody>
+    </table>
+    <p><a id="add-row" class="button" href="#">Add another</a></p>
+    <script type="text/javascript">
+    $( '#add-row' ).on('click', function() {
+            var row = $( '.empty-row.screen-reader-text' ).clone(true);
+            row.removeClass( 'empty-row screen-reader-text' );
+            row.insertBefore( '#ctas-fieldset-one tbody>tr:last' );
+            return false;
+        });
+        
+        $( '.remove-row' ).on('click', function() {
+            $(this).parents('tr').remove();
+            return false;
+        });
+    </script>
+    <?php
+        
 }
 
 function wpsppro_save_meta_box_data($post_id) {
@@ -333,8 +421,10 @@ function wpsppro_save_meta_box_data($post_id) {
     
     $settings = wpsppro_sanitize($_POST['wprtsp']);
     
-
     $settings = apply_filters('wprtsp_cpt_update_settings', $settings);
+    //llog($_POST);
+    //llog($settings);
+    //die();
     $settings['records'] = $wprtsp->generate_cpt_records($settings);
     $wprtsp->generate_edd_records();
     $wprtsp->generate_wooc_records();
