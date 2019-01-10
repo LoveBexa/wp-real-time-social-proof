@@ -53,7 +53,7 @@ class WPRTSP {
 
     function includes(){
         if( file_exists( $this->dir . 'pro/pro.php') ) {
-            include_once( $this->dir . 'pro/pro.php' );
+            //include_once( $this->dir . 'pro/pro.php' );
         }
     }
 
@@ -61,14 +61,290 @@ class WPRTSP {
         add_action( 'init', array( $this, 'register_post_types' ));
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'plugin_styles' ) );
-        add_filter( 'heartbeat_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged in users:
-        add_filter( 'heartbeat_nopriv_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged out users
-        add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_scripts'));
-        add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ));
-        add_action( 'save_post', array($this, 'save_meta_box_data' ));
-        add_action('wprtsp_general_meta_settings',array( $this, 'wprtsppro_general_meta' ));
+        //add_filter( 'heartbeat_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged in users:
+        //add_filter( 'heartbeat_nopriv_received', array( $this,'respond_to_browser'), 10, 3 ); // Logged out users
         
-        add_action( 'in_plugin_update_message'. basename(__DIR__).'/'.basename(__FILE__), array($this, 'plugin_update_message'), 10, 2 );
+        //add_action( 'wp_ajax_wprtsp_handle_ajax', array( $this, 'wprtsp_ajax_handler' ) );
+        //add_action( 'wp_ajax_nopriv_wprtsp_handle_ajax', array( $this, 'wprtsp_ajax_handler' ) );
+
+        //add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts') );
+        add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_fingerprint') );
+        add_action( 'wp_footer',  array( $this, 'wprtsp_footer_scripts') );
+        add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ) );
+        add_action( 'save_post', array($this, 'save_meta_box_data' ) );
+        //add_filter('wprtsp_get_proofs', array($this, 'wprtsp_get_proofs'));
+        add_filter('wprtsp_get_proof_data_conversions_WooCommerce', array($this, 'get_wooc_conversions'));
+        add_filter('wprtsp_get_proof_data_conversions_Easy_Digital_Downloads', array($this, 'get_edd_conversions'));
+        add_action( 'wprtsp_general_meta_settings',array( $this, 'wprtsppro_general_meta' ) );
+        
+        //add_action( 'in_plugin_update_message'. basename(__DIR__).'/'.basename(__FILE__), array($this, 'plugin_update_message'), 10, 2 );
+    }
+
+    function enqueue_fingerprint(){
+        if($this->wprtsp_get_notification()){
+            wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
+        }
+    }
+
+    function wprtsp_footer_scripts() {
+        $settings = $this->wprtsp_get_notification();
+        $this->llog($settings);
+        if($settings['conversions_enable']) {
+            $conversions = apply_filters('wprtsp_get_proof_data_conversions_'.$settings['conversions_shop_type'], array(), $settings);
+        }
+        //$this->llog($conversions);
+        
+            ?>
+            <script type="text/javascript">
+            var clock;
+            wprtsp_settings = (<?php echo json_encode($settings) ; ?>);
+            if(wprtsp_settings.conversions_enable){
+                wprtsp_conversions = <?php echo json_encode($conversions); ?>;
+                wprtsp_conversions_messages = [];
+                for(i = 0; i < wprtsp_conversions.length ; i++) {
+                    wprtsp_conversions_messages.push('<span class="wprtsp_container_wrap" style="<?php echo $this->get_cocontainer_wrap_style(); ?>"><a class="wprtsp_conversion_image" style="<?php echo $this->get_conversion_image_style(); ?>" href="' + wprtsp_conversions[i]['link'] +'"></a><span class="wprtsp_conversion_text" style="<?php echo $this->get_conversion_text_style(); ?>"><a href="' + wprtsp_conversions[i]['link'] +'"><span class="wprtsp_conversion_line1" style="<?php echo $this->get_conversion_line1_style(); ?>">'+wprtsp_conversions[i]['name']+'</span> <span class="wprtsp_conversion_line2" style="<?php echo $this->get_conversion_line2_style() ; ?>">purchased '+wprtsp_conversions[i]['product']+ ' ' + wprtsp_conversions[i]['time'] +' ago</span></a></span></span>');
+                }
+                //console.log(wprtsp_conversions_messages);
+            }
+            //console.log(wprtsp_conversions);
+            if(jQuery) {
+                jQuery(document).ready(function ($) {
+                    var wprtsp_pop = jQuery('#wprtsp_pop').length ? jQuery('#wprtsp_pop') : jQuery('<span/>', {
+                        id: 'wprtsp_pop',
+                        class: 'wprtsp_pop',
+                    }).appendTo('body');
+                    wprtsp_pop.attr('style', '<?php echo $this->get_popup_container_style($settings) ?>');
+                    clock = setTimeout(wprtsp_show_message, wprtsp_settings.general_initial_popup_time * 1000);
+
+                    function wprtsp_show_message() {
+                        console.log(wprtsp_conversions_messages.length);
+                        $message = wprtsp_get_message();
+                        wprtsp_pop.html( $message ).slideDown(200).delay(<?php echo (int) $settings['general_duration'] * 1000; ?>).fadeOut(2000, function(){
+                            if(wprtsp_conversions_messages.length){
+                                clock = setTimeout(wprtsp_show_message, wprtsp_settings.general_subsequent_popup_time * 1000);
+                            }
+                        });
+
+                        jQuery('#wprtsp_pop').mouseover( function () {
+                            wprtsp_pop.stop( true, true ).show(200);
+                        }).mouseout( function () {
+                            wprtsp_pop.stop( true, true ).delay(200).fadeOut(2000, function(){
+                                if(wprtsp_conversions_messages.length){
+                                    clock = setTimeout(wprtsp_show_message, wprtsp_settings.general_subsequent_popup_time * 1000);
+                                }
+                            });
+                        });
+                    }
+
+                    function wprtsp_get_message(){
+                        return wprtsp_conversions_messages.shift();
+                    }
+
+                });
+            }
+            else {
+                console.log('no jq');
+            }
+            </script>
+            <?php
+        
+    }
+
+    function get_cocontainer_wrap_style(){
+        return 'display:flex;align-items:center;line-height: 1em;';
+    }
+
+    function get_conversion_image_style(){
+        return 'text-align: center; display: table; height: 48px; width: 48px; margin-right: 1em; margin-left: -1.618em; border-radius: 100%; text-indent:-9999px; background:url(' . $this->uri . 'assets/map.svg ) no-repeat center;';
+    }
+
+    function get_conversion_text_style(){
+        return 'display:table; font-weight:bold; font-size: 14px; line-height: 1em;';
+    }
+    function get_conversion_line1_style(){
+        return apply_filters('wprtsp_popup_style_line1', 'display:block;white-space: nowrap;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,helvetica,arial,sans-serif !important; font-size: 14px;font-weight: 600;');
+    }
+
+    function get_conversion_line2_style(){
+        return apply_filters('wprtsp_popup_style_line2', 'display:block;white-space: nowrap;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,helvetica,arial,sans-serif !important; font-size: 13px;font-weight: 300;');
+    }
+
+    function get_popup_container_style($settings) {
+        switch($settings['general_position']) {
+            case 'bl': $position_css = 'bottom: 10px; left:10px';
+            break;
+            case 'br': $position_css = 'bottom: 10px; right:10px';
+            break;
+        }
+
+        return apply_filters('wprtsp_popup_container_style', 'all: unset;display:none; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background: white; padding: 1em 2.618em; box-shadow: rgba(0, 0, 0, 0.25) 1px 2px 5px;');
+    }
+
+    function get_wooc_conversions() {
+        if( ! class_exists('WooCommerce') ) {
+            return false;
+        }
+        $query = new WC_Order_Query( array(
+            'limit' => 100,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'return' => 'ids',
+            'status' => 'completed'
+        ) );
+        $orders = $query->get_orders();
+        $customers = array();
+        $messages = array();
+        foreach($orders as $purchase) {
+            $order = wc_get_order($purchase);
+            
+            $user = $order->get_user();
+            if(!empty($user)) {
+                $name = '';
+                if( $user->user_firstname && strtolower($user->user_firstname) != 'guest' ) {
+                    $name .= $user->user_firstname;
+                }
+                if( $user->user_lastname && strtolower($user->user_lastname) != 'guest'){
+                    $name .= ' ' . $user->user_lastname;
+                }
+                if(empty(trim($name))) {
+                    $name = 'Someone';
+                }
+            }
+            else {
+                $customers[$purchase]['name'] = 'Someone';
+            }
+            $item = $order->get_items();
+            $item = array_shift($item);
+            $customers[$purchase]['product'] = $item->get_name();
+            $customers[$purchase]['product_link'] = get_permalink($item->get_product_id());
+            $time = new WC_DateTime( $order->get_date_completed() );
+            $customers[$purchase]['time'] = human_time_diff($time->getTimestamp());
+            $messages[] = array(
+                'link' => $customers[$purchase]['product_link'],
+                'name' => $name,
+                'product' => $customers[$purchase]['product'],
+                'time' => $customers[$purchase]['time']
+            );
+        }
+        
+        return $messages;
+    }
+
+    function get_edd_conversions() {
+        if(! class_exists('Easy_Digital_Downloads')){
+            return array();
+        }
+        $args = array(
+            'numberposts'      => 100,
+            'post_status'      => 'publish',			
+            'post_type'        => 'edd_payment',
+            'suppress_filters' => true, 
+            );						
+        $payments = get_posts( $args );			
+        $records = array();
+        $messages = array();
+        if ( $payments ) { 
+            foreach ( $payments as $payment_post ) { 
+                setup_postdata($payment_post);
+                $payment      = new EDD_Payment( $payment_post->ID );
+                if(empty($payment->ID)) {
+                    continue;
+                }
+                
+                $payment_time   = human_time_diff(strtotime( $payment->date ), current_time('timestamp'));
+                $customer       = new EDD_Customer( $payment->customer_id );
+                $downloads = $payment->cart_details;
+                $downloads = array_slice($downloads, 0, 1, true);
+                $name = '';
+                if( array_key_exists('first_name', $payment->user_info) && ! empty( $payment->user_info['first_name'] ) ) {
+                    $name = $payment->user_info['first_name'];
+                }
+                if( array_key_exists('last_name', $payment->user_info) && ! empty( $payment->user_info['last_name'] ) ) {
+                    $name .= ' '.$payment->user_info['last_name'];
+                }
+                if(empty(trim($name))) {
+                    $name = 'Someone';
+                }
+                $records[$payment_post->ID] = array('product_link'=>get_permalink( $downloads[0]['id'] ),'first_name' => $payment->user_info['first_name'], 'last_name' => $payment->user_info['last_name'], 'transaction' => 'purchased', 'product' => $downloads[0]['name'] , 'time' => $payment_time);
+                $messages[] = array(
+                    'link' => get_permalink( $downloads[0]['id'] ),
+                    'name' => $name,
+                    'product' => $downloads[0]['name'],
+                    'time' => $payment_time
+                );
+                //apply_filters('wprtsp_edd_conversion_message','<a href="'.get_permalink( $downloads[0]['id'] ).'"><span class="wprtsp_conversion_icon" style="'.$this->get_conversion_icon_style().'"></span><span class="wprtsp_line1" style="'. $this->get_message_style_line1() . '">' . $name . '</span><span class="wprtsp_line2" style="' . $this->get_message_style_line2() . '"> purchased ' . $downloads[0]['name'] . ' ' . $payment_time . ' ago.</span></a>',$records[$payment_post->ID]);
+            }
+            wp_reset_postdata();
+        }
+        
+        return $messages;
+    }
+
+
+    function wprtsp_get_notification() {
+        $notifications  = get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
+       
+        foreach($notifications as $notification) {
+            $meta = get_post_meta( $notification->ID, '_socialproof', true );
+            
+            $meta['notification_id'] = $notification->ID;
+            $show_on = (int) $meta['general_show_on'];
+
+            switch($show_on) {
+                case 1:
+                    return $meta;
+                    break;
+                case 2:
+                    $post_ids = $meta['general_post_ids']; 
+                    if( ! is_array($post_ids)) {
+                        if(strpos($post_ids, ',') !== false ){
+                            $post_ids = explode(',', $post_ids);
+                        }
+                        else {
+                            $post_ids = array($post_ids);
+                        }
+                    }
+                    if( is_singular()  && in_array(get_the_ID(), $post_ids) ) {  
+                        return  $meta;
+                    }
+                    break;
+                case 3:
+                    $post_ids = $meta['general_post_ids'];
+                        if(! is_array($post_ids)) {
+                            if(strpos($post_ids, ',') !== false ){
+                                $post_ids = explode(',', $post_ids);
+                            }
+                            else {
+                                $post_ids = array($post_ids);
+                            }
+                        }
+                        if(  ! is_singular() || (is_singular()  && ! in_array(get_the_ID(), $post_ids) ) ) {
+                            return $meta;
+                        }
+                    break;
+            }
+        }
+    }
+
+    function wprtsp_ajax_handler() {
+        $wprtsp_request = isset($_POST['wprtsp']) ? $_POST['wprtsp'] : array();
+        if(!$wprtsp_request) {
+            wp_send_json( array() );
+        }
+
+        //$proofs = apply_filters("wprtsp_get_proofs", $wprtsp_request['get_proofs']);
+        $proofs = $wprtsp_request['get_proofs'];
+        //$this->llog($wprtsp_request['get_proofs']);
+        $types = array();
+        foreach($proofs as $proof => $data) {
+            //$types[$proof] = apply_filters("wprtsp_get_proof_data_{$proof}", $data );
+            $types[] = "wprtsp_get_proof_data_{$proof}";
+        }
+
+        wp_send_json(  $types ) ;
+        //wp_send_json(json_encode( $_POST['wprtsp']) );
+        //$data = apply_filters("wprtsp_get_proofs", $data, $wprtsp_request );
+        //wp_send_json(json_encode($data));
     }
 
     function plugin_update_message( $data, $response ) {
@@ -94,23 +370,21 @@ class WPRTSP {
                 'general_initial_popup_time' => '5',
                 'general_subsequent_popup_time' => '30',
                 'general_post_ids' => get_option( 'page_on_front'),
+                'general_position' => 'bl',
 
-                'conversions_enable' => 1,
-                'conversions_show_on_mobile' => 1,
+                'conversions_enable' => true,
+                'conversions_show_on_mobile' => true,
                 'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ),
                 'conversions_transaction' => 'subscribed to the newsletter',
                 'conversions_transaction_alt' => 'registered for the webinar',
-                
-                'conversions_sound_notification' => 0,
-                'conversions_position' => 'bl',
+                'conversions_sound_notification' => false,
                 
                 'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right'),
 
                 /* Additional routines */
-                'conversions_records' => $this->generate_cpt_records(array('conversions_transaction' => 'subscribed to the newsletter', 'conversions_transaction_alt' => 'registered for the webinar')),
+                //'conversions_records' => $this->generate_cpt_records(array('conversions_transaction' => 'subscribed to the newsletter', 'conversions_transaction_alt' => 'registered for the webinar')),
 
         );
-
         return apply_filters('wprtsp_cpt_defaults', $defaults);
     }
 
@@ -119,7 +393,7 @@ class WPRTSP {
         wp_nonce_field( 'socialproof_meta_box_nonce', 'socialproof_meta_box_nonce' );
         if( apply_filters( 'wprtsp_general_meta', true ) ) {
         $settings = get_post_meta( $post->ID, '_socialproof', true );
-        //$this->llog($settings);
+
         $defaults = $this->cpt_defaults();
         $settings = wp_parse_args( $settings, $defaults );
         $show_on = $settings['general_show_on'];
@@ -127,6 +401,12 @@ class WPRTSP {
         $duration = $settings['general_duration'];
         $initial_popup_time = $settings['general_initial_popup_time'];
         $subsequent_popup_time = $settings['general_subsequent_popup_time'];
+        $general_position = array_key_exists('general_position', $settings) ? $settings['general_position'] : 'bl';
+        $positions_html = '';
+        $positions = $defaults['positions'];
+        foreach($positions as $key=>$value) {
+            $positions_html .= '<option value="' . $key . '" ' . selected( $general_position, $key, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
+        }
         ?>
         <table id="tbl_display" class="wprtsp_tbl wprtsp_tbl_display">
             <tr>
@@ -145,6 +425,12 @@ class WPRTSP {
              <tr id="post_ids_selector">
                 <td><label for="wprtsp_general_post_ids">Enter Post Ids (comma separated)</label></td>
                 <td><input type="text" class="widefat" <?php if($show_on == 1) {echo 'readonly="true"';} ?> id="wprtsp_general_post_ids" name="wprtsp[general_post_ids]" value="<?php echo $post_ids; ?>"></td>
+            </tr>
+            <tr>
+                <td><label for="wprtsp[general_position]">Position</label></td>
+                <td><select id="wprtsp[general_position]" name="wprtsp[general_position]">
+                        <?php echo $positions_html; ?>
+                    </select></td>
             </tr>
         </table>
         <table id="tbl_timings" class="wprtsp_tbl wprtsp_tbl_timings">
@@ -194,21 +480,20 @@ class WPRTSP {
         else {
             do_action('wprtsp_general_meta_settings');
         }
+        $this->llog($settings);
     }
 
     function conversions_meta_box(){
         global $post;
         if( apply_filters('wprtsp_conversions_meta', true) ) {
         $settings = get_post_meta($post->ID, '_socialproof', true);
-        $defaults = $this->cpt_defaults();
-        $settings = wp_parse_args($settings, $defaults);
+        $settings = $this->wprtsp_sanitize($settings);
         $conversions_enable = $settings['conversions_enable'];
         $conversions_shop_type = $settings['conversions_shop_type'];
         $conversions_transaction = $settings['conversions_transaction'];
         $conversions_transaction_alt = $settings['conversions_transaction_alt'];
         $conversions_sound_notification = $settings['conversions_sound_notification'];
-        $conversions_position = array_key_exists('conversions_position', $settings) ? $settings['conversions_position'] : 'bl';
-
+        
         $sources = array();
         if(class_exists('Easy_Digital_Downloads')) {
             $sources[] = 'Easy_Digital_Downloads';
@@ -222,12 +507,7 @@ class WPRTSP {
         foreach($sources as $key=>$value) {
             $sources_html .= '<option value="' . $value . '" ' . selected( $conversions_shop_type, $value, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
         }
-        
-        $positions_html = '';
-        $positions = $defaults['positions'];
-        foreach($positions as $key=>$value) {
-            $positions_html .= '<option value="' . $key . '" ' . selected( $conversions_position, $key, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
-        }
+       
         ?>
         <table id="tbl_conversions" class="wprtsp_tbl wprtsp_tbl_conversions">
             <tr>
@@ -256,12 +536,6 @@ class WPRTSP {
                 <td><input id="wprtsp_conversions_transaction_alt" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversions_transaction_alt]" type="text" class="widefat" value="<?php echo $conversions_transaction_alt ?>" /></td>
             </tr>
             <tr>
-                <td><label for="wprtsp[conversions_position]">Position</label></td>
-                <td><select id="wprtsp[conversions_position]" name="wprtsp[conversions_position]">
-                        <?php echo $positions_html; ?>
-                    </select></td>
-            </tr>
-            <tr>
                 <td><label for="wprtsp[conversions_sound_notification]">Enable Sound Notification</label></td>
                 <td><input id="wprtsp[conversions_sound_notification]" name="wprtsp[conversions_sound_notification]" type="checkbox" value="1" <?php checked( $conversions_sound_notification, '1' , true); ?>/></td>
             </tr>
@@ -288,6 +562,23 @@ class WPRTSP {
         }
     }
 
+    function wprtsp_sanitize($request){
+        $settings['general_show_on'] = array_key_exists('general_show_on' ,$request) ? sanitize_text_field($request['general_show_on'] ) : $defaults['general_show_on'];
+        $settings['general_post_ids'] = array_key_exists('general_post_ids' ,$request) ? sanitize_text_field($request['general_post_ids'] ) : $defaults['general_post_ids'];
+        $settings['general_position'] = array_key_exists('general_position' ,$request) ? sanitize_text_field($request['general_position'] ) : $defaults['general_position'];
+        $settings['general_initial_popup_time'] = array_key_exists('general_initial_popup_time' ,$request) ? sanitize_text_field($request['general_initial_popup_time'] ) : $defaults['general_initial_popup_time'];
+        $settings['general_duration'] = array_key_exists('general_duration' ,$request) ? sanitize_text_field($request['general_duration'] ) : $defaults['general_duration'];
+        $settings['general_subsequent_popup_time'] = array_key_exists('general_subsequent_popup_time' ,$request) ? sanitize_text_field($request['general_subsequent_popup_time'] ) : $defaults['general_subsequent_popup_time'];
+
+        $settings['conversions_enable'] = array_key_exists('conversions_enable' ,$request) && $request['conversions_enable'] ? true : false;
+        $settings['conversions_shop_type'] = array_key_exists('conversions_shop_type' ,$request) ? sanitize_text_field($request['conversions_shop_type'] ) : $defaults['conversions_shop_type'];
+        $settings['conversions_transaction'] = array_key_exists('conversions_transaction' ,$request) ? sanitize_text_field($request['conversions_transaction'] ) : $defaults['conversions_transaction'];
+        $settings['conversions_transaction_alt'] = array_key_exists('conversions_transaction_alt' ,$request) ? sanitize_text_field($request['conversions_transaction_alt'] ) : $defaults['conversions_transaction_alt'];
+        $settings['conversions_sound_notification'] = array_key_exists('conversions_sound_notification' , $request) && $request['conversions_sound_notification'] ? true : false;
+
+        return $settings;
+    }
+
     function save_meta_box_data($post_id){
         
         if ( ! isset( $_POST['socialproof_meta_box_nonce'] ) ||
@@ -302,41 +593,11 @@ class WPRTSP {
         if (!current_user_can('edit_post', $post_id)) {
             return;
         }
-
-        $general_show_on = sanitize_text_field($_POST['wprtsp']['general_show_on']);
-        $general_duration = sanitize_text_field($_POST['wprtsp']['general_duration']);
-        $general_initial_popup_time = sanitize_text_field($_POST['wprtsp']['general_initial_popup_time']);
-        $general_subsequent_popup_time = sanitize_text_field($_POST['wprtsp']['general_subsequent_popup_time']);
-        $general_post_ids = sanitize_text_field($_POST['wprtsp']['general_post_ids']);
-
-        $conversions_enable = sanitize_text_field($_POST['wprtsp']['conversions_enable']);
-        $conversions_shop_type = sanitize_text_field($_POST['wprtsp']['conversions_shop_type']);
-        $conversions_transaction = sanitize_text_field($_POST['wprtsp']['conversions_transaction']);
-        $conversions_transaction_alt = sanitize_text_field($_POST['wprtsp']['conversions_transaction_alt']);
-        $conversions_sound_notification = sanitize_text_field($_POST['wprtsp']['conversions_sound_notification']);
-        $conversions_position = sanitize_text_field($_POST['wprtsp']['conversions_position']);
-
-        $settings = array(
-
-            'general_show_on' => $general_show_on,
-            'general_duration' => $general_duration,
-            'general_initial_popup_time' => $general_initial_popup_time,
-            'general_subsequent_popup_time' => $general_subsequent_popup_time,
-            'general_post_ids' => $general_post_ids,
-
-            'conversions_enable' => $conversions_enable,
-            'conversions_shop_type' => $conversions_shop_type,
-            'conversions_transaction' => $conversions_transaction,
-            'conversions_transaction_alt' => $conversions_transaction_alt,
-            'conversions_sound_notification' => $conversions_sound_notification,
-            'conversions_position' => $conversions_position,
-
-        );
+        
+        $request = $_POST['wprtsp'];
+        $settings = $this->wprtsp_sanitize($request);
         $settings = apply_filters('wprtsp_cpt_update_settings', $settings);
-        $settings['records'] = $this->generate_cpt_records($settings);
-        $this->generate_edd_records();
-        $this->generate_wooc_records();
-        //$settings = wp_parse_args( $settings, $this->cpt_defaults() );
+
         update_post_meta( $post_id, '_socialproof', $settings );
     }
 
@@ -405,7 +666,7 @@ class WPRTSP {
             $notification_id =  $data['wprtsp_notification_id'];
             $shop_type = get_post_meta($notification_id, '_socialproof', true);
             $shop_type = $shop_type['conversions_shop_type'];
-            
+            $request_type = $shop_type['proof_type']; // which kind of proof is requested
             switch($shop_type) {
                 case 'Easy_Digital_Downloads': $response = $this->send_edd_records($response, $data, $screen_id, $notification_id);
                 break;
@@ -417,164 +678,15 @@ class WPRTSP {
         return $response;
     }
 
-    function send_edd_records($response, $data, $screen_id, $notification_id) {
-        $records = get_transient('wprtsp_edd_' . $data['wprtsp']);
-        $settings = get_transient('wprtsp_edd');
-        if(false === $settings) {
-            $settings = $this->generate_edd_records();
-        }
-        if($records) {
-            $record = array_shift(array_diff_key( array_keys($settings), $records ));
-            if(empty($record)) {
-                return;
-            }
-            $records[] = $record;
-            set_transient('wprtsp_edd_' . $data['wprtsp'], $records, 1 * HOUR_IN_SECONDS);
-            $response['wprtsp'] = json_encode( $this->get_edd_message($settings[$record], $notification_id) );
-        }
-        else {
-            $settings_clone = $settings; // we'll use array_shift but need to reuse the array; so clone it
-            $record = array_shift(array_keys( $settings_clone ));
-            if(empty($record)) {
-                return;
-            }
-            $records[] = $record;
-            set_transient('wprtsp_edd_' . $data['wprtsp'], array( $record ), 1 * HOUR_IN_SECONDS);
-            $response['wprtsp'] = json_encode( $this->get_edd_message($settings_clone[$record], $notification_id) );
-            }
-        return $response;
-    }
-
-    function get_edd_message($record, $notification_id) {
-        $settings = $this->get_cpt_settings($notification_id);
-        $message = $settings['conversions_sound_notification_markup'].'<span class="geo wprtsp_notification" style="'.$settings['conversions_notification_style'].'">Map</span><span class="wprtsp_text" style="'.$settings['conversions_text_style'].'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased <a href="'.$record['product_link'].'">' . $record['product'] . '</a><span class="action" style="'.$settings['conversions_action_style'].'"> ' . $record['time'] . ' ago</span></span>';    
-        
-        return $message;
-    }
-    
-    function send_wooc_records($response, $data, $screen_id) {
-        $records = get_transient('wprtsp_wooc_' . $data['wprtsp']);
-        //$response['wprtsp'] = json_encode($records);
-        $settings = get_transient('wprtsp_wooc');
-        if(false === $settings) {
-            $settings = $this->generate_wooc_records();
-        }
-        if($records) {
-            $record = array_shift( $records );
-            if(empty($record)) {
-                return;
-            }
-            $response['wprtsp'] = json_encode( $this->get_wooc_message($record) );
-            set_transient('wprtsp_wooc_' . $data['wprtsp'], $records, 1 * HOUR_IN_SECONDS);
-        }
-        else {
-            $record = array_shift( $settings );
-            if(empty($record)) {
-                return;
-            }
-            $records[] = $record;
-            set_transient('wprtsp_wooc_' . $data['wprtsp'], $settings, 1 * HOUR_IN_SECONDS);
-            $response['wprtsp'] = json_encode( $this->get_wooc_message($record) );
-            }
-        return $response;
-    }
-
-    function get_wooc_message($record) {
-        $settings = $this->get_cpt_settings($notification_id);
-        $message = $settings['conversions_sound_notification_markup'].'<span class="geo wprtsp_notification" style="'.$settings['conversions_notification_style'].'">Map</span><span class="wprtsp_text" style="'.$settings['conversions_text_style'].'"><span class="wprtsp_name">' . $record['first_name'] . '</span> purchased <a href="'.$record['product_link'].'">' . $record['product'] . '</a><span class="action" style="'.$settings['conversions_action_style'].'"> ' . $record['time'] . ' ago</span></span>';
-        
-        return $message;
-    }
-
-    function send_generated_records( $response, $data, $screen_id, $notification_id = 0 ) {
-        $response['wprtsp'] = 'this is a generated record';
-        $records = get_transient( 'wprtsp_' . $data['wprtsp'] );
-        $settings = \get_post_meta( $notification_id, '_socialproof', true );
-        $settings = $settings['records'];
-        if( $records ) {
-            $record = array_rand( array_diff_key( $settings, $records ));
-            if(empty($record)) {
-                return '';
-            }
-            $records[] = $record;
-            set_transient('wprtsp_' . $data['wprtsp'], $records, 1 * HOUR_IN_SECONDS);
-            $response['wprtsp'] = json_encode( $settings[$record] );
-        }
-        else {
-            $record = array_rand( $settings );
-            if(empty($record)) {
-                return '';
-            }
-            set_transient( 'wprtsp_' . $data['wprtsp'], array($record), 1 * HOUR_IN_SECONDS );
-            $response['wprtsp'] = json_encode( $settings[$record] );
-            }
-        return $response;
-    }
-
     function make_seed() {
         list($usec, $sec) = explode(' ', microtime());
         return $sec + $usec * 1000000;
     }
 
-    function enqueue_scripts(){
-        $notifications  = get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
-        $active_notifications = array();
-        foreach($notifications as $notification) {
-            $meta = get_post_meta( $notification->ID, '_socialproof', true );
-            $show_on = $meta['general_show_on'];
-            switch($show_on) {
-                case '1':
-                    if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
-                        $social_proof_settings = $this->get_cpt_settings( $notification->ID );
-                        wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-                        wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                        wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
-                    }
-                    break;
-                case '2': 
-                    if(! is_array($post_ids)) {
-                        if(strpos($post_ids, ',') !== false ){
-                            $post_ids = explode(',', $post_ids);
-                        }
-                        else {
-                            $post_ids = array($post_ids);
-                        }
-                    }
-                    if( is_singular()  && in_array(get_the_ID(), $post_ids) ) {
-                        if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
-                            $social_proof_settings = $this->get_cpt_settings( $notification->ID );
-                            wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-                            wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                            wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ));
-                        }
-                    }
-                    break;
-                case '3':
-                    $post_ids = $meta['general_post_ids'];
-                        if(! is_array($post_ids)) {
-                            if(strpos($post_ids, ',') !== false ){
-                                $post_ids = explode(',', $post_ids);
-                            }
-                            else {
-                                $post_ids = array($post_ids);
-                            }
-                        }
-                        if(  ! is_singular() || (is_singular()  && ! in_array(get_the_ID(), $post_ids) ) ) {
-                            if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
-                                $social_proof_settings = $this->get_cpt_settings( $notification->ID );
-                                wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
-                                wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('heartbeat','jquery'), null, true);
-                                wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( $social_proof_settings ) );
-                            }
-                        }
-                    break;
-            }
-        }
-    }
-
     function get_cpt_settings( $notification_id ){
         $meta = get_post_meta($notification_id, '_socialproof', true);
-        $position = $meta['conversions_position'];
+        return $meta;
+        $position = $meta['general_position'];
         $position_css = '';
         switch($position) {
             case 'bl': $position_css = 'bottom: 10px; left:10px';
@@ -586,6 +698,7 @@ class WPRTSP {
         $vars = array(
             'id' => (int) $notification_id,
             'url' => $this->uri,
+            'ajaxurl' => admin_url( 'admin-ajax.php' ),
             'conversions_container_style' => apply_filters( 'wprtsp_conversions_container_style', 'display:none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; font-size: 14px; max-width:90%; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background:white; padding: 1em 2.618em; box-shadow: 2px -1px 5px rgba(0,0,0,.15);' ),
             'conversions_notification_style' => apply_filters('wprtsp_conversions_notification_style', 'text-align: center; display: table; height: 32px; width: 32px; float: left; margin-right: .5em; margin-left: -1.618em; border-radius: 100%; text-indent:-9999px; background:url(' . $this->uri . 'assets/map.svg ) no-repeat center;' ),
             'conversions_action_style' => apply_filters( 'wprtsp_conversions_action_style', 'margin-top: .5em; display: block; font-weight: 300; color: #aaa; font-size: 12px; line-height: 1em;' ),
@@ -602,6 +715,23 @@ class WPRTSP {
         if($vars['conversions_sound_notification'] == false) {
             $vars['conversions_sound_notification_markup'] = '';
         }
+
+        $vars['get_proofs'] = apply_filters('wprtsp_get_proofs', array(
+                'conversionstats' => array(
+                    'conversions_shop_type' => $vars['conversions_shop_type'],
+                    ),
+                /*
+                'livestats' => array(
+                    'visitors' => true
+                    ),
+                    'hotstats' => array(
+                        'conversions_shop_type' => $vars['conversions_shop_type'],
+                        'transaction_type' => $vars['transaction_type'],
+                        'duration' => $vars['transaction_type'],
+                    ),
+                */
+                )
+            );
         return $vars;
     }
 
@@ -624,29 +754,6 @@ class WPRTSP {
         
     }
 
-    /* Outputs any variable / php objects / arrays in a clear visible frmat */
-    static function llog($str) {
-        echo '<pre>';
-        print_r($str);
-        echo '</pre>';
-    }
-
-    function get_setting( $setting ) {
-        $defaults = $this->defaults();
-        $settings = wp_parse_args( get_option( 'wprtsp', $defaults ), $defaults );
-        return isset( $settings[ $setting ] ) ? $settings[ $setting ] : false;
-    }
-
-    function sanitize( $settings ) {
-        $settings['records'] = $this->generate_records($settings);
-        $this->generate_edd_records();
-        $this->generate_wooc_records();
-        $settings['transaction'] = sanitize_text_field($settings['transaction']);
-        $settings['transaction_alt'] = sanitize_text_field($settings['transaction_alt']);
-        $settings['post_ids'] = sanitize_text_field(  preg_replace("/[^0-9,]/", "", $settings['post_ids']) ) ;
-        return $settings;
-    }
-
     function generate_cpt_records($settings){
         
         $transaction = $settings['conversions_transaction'];
@@ -665,74 +772,13 @@ class WPRTSP {
         return $indexes;
     }
 
-    function generate_edd_records() {
-        if(! class_exists('Easy_Digital_Downloads')){
-            return false;
-        }
-        $args = array(
-            'numberposts'      => 100,
-            'post_status'      => 'publish',			
-            'post_type'        => 'edd_payment',
-            'suppress_filters' => true, 
-            );						
-        $payments = get_posts( $args );			
-        $records = array();
-        if ( $payments ) { 
-            foreach ( $payments as $payment_post ) { 
-                setup_postdata($payment_post);
-                $payment      = new \EDD_Payment( $payment_post->ID );
-                if(empty($payment->ID)) {
-                    continue;
-                }
-                
-                $payment_time   = human_time_diff(strtotime( $payment->date ), current_time('timestamp'));
-                $customer       = new \EDD_Customer( $payment->customer_id );
-                $downloads = $payment->cart_details;
-                $downloads = array_slice($downloads, 0, 1, true);
-                
-                $records[$payment_post->ID] = array('product_link'=>get_permalink( $downloads[0]['id'] ),'first_name' => $payment->user_info['first_name'], 'last_name' => $payment->user_info['last_name'], 'transaction' => 'purchased', 'product' => $downloads[0]['name'] , 'time' => $payment_time);
-            }
-            wp_reset_postdata();
-        }
-        
-        return set_transient( 'wprtsp_edd', $records, 30 * MINUTE_IN_SECONDS );
+    /* Outputs any variable / php objects / arrays in a clear visible frmat */
+    static function llog($str) {
+        echo '<pre>';
+        print_r($str);
+        echo '</pre>';
     }
 
-    function generate_wooc_records() {
-        if( ! class_exists('WooCommerce') ) {
-            return false;
-        }
-        $query = new WC_Order_Query( array(
-            'limit' => 100,
-            'orderby' => 'date',
-            'order' => 'DESC',
-            'return' => 'ids',
-            'status' => 'completed'
-        ) );
-        $orders = $query->get_orders();
-        $customers = array();
-        foreach($orders as $purchase) {
-            $order = wc_get_order($purchase);
-            
-            $user = $order->get_user();
-            if(!empty($user)) {
-                $customers[$purchase]['first_name'] = empty($user->user_firstname) ? 'Guest' : $user->user_firstname ;
-                $customers[$purchase]['last_name'] = empty($user->user_lastname) ? 'Guest' : $user->user_lastname ;
-            }
-            else {
-                $customers[$purchase]['first_name'] = 'Guest';
-                $customers[$purchase]['last_name'] = 'Guest';
-            }
-            $item = $order->get_items();
-            $item = array_shift($item);
-            $customers[$purchase]['transaction'] = 'purchased';
-            $customers[$purchase]['product'] = $item->get_name();
-            $customers[$purchase]['product_link'] = get_permalink($item->get_product_id());
-            $time = new WC_DateTime( $order->get_date_completed() );
-            $customers[$purchase]['time'] = human_time_diff($time->getTimestamp());
-        }
-        return set_transient( 'wprtsp_wooc', $customers, 30 * MINUTE_IN_SECONDS);
-    }
 }
 
 function wprtsp() {

@@ -3,26 +3,72 @@ if (jQuery) {
         time = Date.now();
         wprtsp_settings = JSON.parse(wprtsp_vars);
         console.dir(wprtsp_settings);
-        if(wprtsp_settings.conversions_sound_notification){
+        /* if(wprtsp_settings.conversions_sound_notification){
             var wprtsp_audio = jQuery('#wprtsp_audio').length ? jQuery('#wprtsp_audio') : jQuery('<audio/>', {
             id: 'wprtsp_audio',
             class: 'wprtsp_audio',
             preload: 'auto',
             src: wprtsp_settings.conversions_sound_notification_file
         }).appendTo('body');
-        }
-        wp.heartbeat.interval(wprtsp_settings.general_initial_popup_time);
-        new Fingerprint2().get(function (result, components) {
+        } */
+        //wp.heartbeat.interval(wprtsp_settings.general_initial_popup_time);
+        /*new Fingerprint2().get(function (result, components) {
             jQuery(document).on('heartbeat-send', function (e, data) {
                 data['wprtsp'] = result + '_' + time;
                 //console.log(data['wprtsp']);
                 data['wprtsp_notification_id'] = wprtsp_settings.id;
             });
         })
-        prime1 = [3, 7, 13, 19, 29];
-        prime2 = [5, 11, 17, 23, 31];
+        var prime1 = [3, 7, 13, 19, 29];
+        var prime2 = [5, 11, 17, 23, 31];
+        
+        
+        */
 
-        jQuery(document).on('heartbeat-tick', function (event, data) {
+        
+        // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+        
+		//jQuery.ajax(wprtsp_settings.ajaxurl, data, function(response) {
+		//	console.log(response);
+        //});
+        
+        
+        jQuery.ajax({
+            url: wprtsp_settings.ajaxurl,
+            type: "post",
+            dataType: "json",
+            data: {
+                    'action': 'wprtsp_handle_ajax',
+                    'wprtsp': {
+                        'settings': wprtsp_settings,
+                        'get_proofs': {
+                            'conversionstats': {
+                                'conversions_shop_type': wprtsp_settings.conversions_shop_type
+                            },
+                            'livestats': {
+                                'visitors': true
+                            },
+                            'hotstats': {
+                                'conversions_shop_type': wprtsp_settings.conversions_shop_type,
+                                'transaction_type': 'WC_Order_Query',
+                                'duration': '72hrs'
+                            },
+                            'ctas': {
+                                'something': true
+                            }
+                        }
+                    }
+                },
+            success: function(msg){
+                console.log(msg); // data is already json, no need to parse
+            },
+            error: function(jqXHR, textStatus){
+                //console.log(jqXHR);
+                //console.log(textStatus);
+            },
+        });
+        
+        /* jQuery(document).on('heartbeat-tick', function (event, data) {
             if (data.hasOwnProperty('wprtsp')) {
                 wp.heartbeat.interval(wprtsp_settings.general_subsequent_popup_time); // don't pop-up too much
                 
@@ -62,6 +108,19 @@ if (jQuery) {
             }).mouseout(function () {
                 wprtsp_pop.stop(true, true).delay(200).fadeOut(2000);
             });
-        });
+        }); */
     });
+}
+else {
+    console.log('this script needs jquery. no jq found');
+}
+
+function isJson(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        //console.log(e);
+        return false;
+    }
+    return true;
 }

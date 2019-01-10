@@ -8,7 +8,8 @@ remove_action( 'save_post', array( $wprtsp, 'save_meta_box_data' ));
 add_action( 'add_meta_boxes', 'wpsppro_add_meta_boxes' );
 add_action( 'save_post', 'wpsppro_save_meta_box_data' );
 
-add_filter('wprtsp_cpt_defaults', 'wprtsppro_cpt_defaults');
+add_filter('wprtsp_cpt_defaults', 'wprtsppro_get_cpt_defaults');
+//add_filter('wprtsp_get_proofs', 'wprtsppro_get_cpt_defaults');
 
 add_filter('wprtsp_conversions_sound_notification_markup', 'wprtspro_conversions_sound_notification_markup', 10 , 2);
 add_filter('wprtsp__sound_notification_file', 'wprtspro_sound_notification_file', 10 , 2);
@@ -31,16 +32,17 @@ function wprtspro_sound_notification_file($file, $settings){
     return $wprtsp->uri .'pro/sounds/'.$settings['conversions_sound_notification_file'];
 }
 
-function wprtsppro_get_cpt_defaults($defaults = array()){
+function wprtsppro_get_cpt_defaults($settings = array()){
     $wprtsp = WPRTSP::get_instance();
     
     $defaults = array(
 
         'general_show_on' => '1', // select
-        'general_duration' => '4', // select
-        'general_initial_popup_time' => '5', // select
-        'general_subsequent_popup_time' => '30', // select
         'general_post_ids' => get_option( 'page_on_front'), // string
+        'general_position' => 'bl', // select
+        'general_initial_popup_time' => '5', // select
+        'general_duration' => '4', // select
+        'general_subsequent_popup_time' => '30', // select
 
         'conversions_enable' => true, // bool
         'conversions_enable_mob' => true, // bool
@@ -51,7 +53,6 @@ function wprtsppro_get_cpt_defaults($defaults = array()){
         
         'conversions_sound_notification' => false, // bool
         'conversions_sound_notification_file' => 'salient.mp3', // string
-        'conversions_position' => 'bl', // select
         
         'conversions_title_notification' => false, // bool
 
@@ -63,6 +64,7 @@ function wprtsppro_get_cpt_defaults($defaults = array()){
     );
 
     return $defaults;
+    //return wp_parse_args( $settings, $defaults );
 }
 
 function wpsppro_sanitize( $request ) {
@@ -70,10 +72,11 @@ function wpsppro_sanitize( $request ) {
    
     $settings = array();
     $settings['general_show_on'] = array_key_exists('general_show_on' ,$request) ? sanitize_text_field($request['general_show_on'] ) : $defaults['general_show_on'];
+    $settings['general_post_ids'] = array_key_exists('general_post_ids' ,$request)? sanitize_text_field($request['general_post_ids'] ) : $defaults['general_post_ids'];
+    $settings['general_position'] = array_key_exists('general_position' , $request)? sanitize_text_field( $request['general_position'] ) : $defaults['general_position'];
     $settings['general_duration'] = array_key_exists('general_duration' ,$request)? sanitize_text_field($request['general_duration'] ) : $defaults['general_duration'];
     $settings['general_initial_popup_time'] = array_key_exists('general_initial_popup_time' ,$request)? sanitize_text_field($request['general_initial_popup_time'] ) : $defaults['general_initial_popup_time'];
     $settings['general_subsequent_popup_time'] = array_key_exists('general_subsequent_popup_time' ,$request)? sanitize_text_field($request['general_subsequent_popup_time'] ) : $defaults['general_subsequent_popup_time'];
-    $settings['general_post_ids'] = array_key_exists('general_post_ids' ,$request)? sanitize_text_field($request['general_post_ids'] ) : $defaults['general_post_ids'];
 
     $settings['conversions_enable'] = array_key_exists('conversions_enable' , $request) && $request['conversions_enable'] ? true : false;
     $settings['conversions_enable_mob'] = array_key_exists('conversions_enable_mob' , $request) && $request['conversions_enable_mob'] ? true : false;
@@ -82,7 +85,6 @@ function wpsppro_sanitize( $request ) {
     $settings['conversions_shop_type'] = array_key_exists('conversions_shop_type' ,$request)?sanitize_text_field($request['conversions_shop_type'] ) : $defaults['general_post_ids'];
     $settings['conversions_transaction'] = array_key_exists('conversions_transaction' , $request)? sanitize_text_field( $request['conversions_transaction'] ) : $defaults['conversions_transaction'];
     $settings['conversions_transaction_alt'] = array_key_exists('conversions_transaction_alt' , $request)? sanitize_text_field( $request['conversions_transaction_alt'] ) : $defaults['conversions_transaction_alt'];
-    $settings['conversions_position'] = array_key_exists('conversions_position' , $request)? sanitize_text_field( $request['conversions_position'] ) : $defaults['conversions_position'];
     $settings['conversions_sound_notification'] = array_key_exists('conversions_sound_notification' , $request) && $request['conversions_sound_notification'] ? true : false;
     $settings['conversions_sound_notification_file'] = array_key_exists('conversions_sound_notification_file' ,$request) ? sanitize_text_field($request['conversions_sound_notification_file'] ) : $defaults['conversions_sound_notification_file'];
     $settings['badge'] = array_key_exists('badge' , $request) && $request['badge'] ? true : false;
@@ -103,12 +105,19 @@ function wpsppro_general_meta_box(){
     if(! $settings) {
         $settings = wprtsppro_get_cpt_defaults();
     }
+    //llog($settings);
     $settings = wpsppro_sanitize($settings);
     $show_on = $settings['general_show_on'];
     $post_ids = $settings['general_post_ids'];
     $duration = $settings['general_duration'];
     $initial_popup_time = $settings['general_initial_popup_time'];
     $subsequent_popup_time = $settings['general_subsequent_popup_time'];
+    $general_position = $settings['general_position'];
+    $positions_html = '';
+    $positions = $defaults['positions'];
+    foreach($positions as $key=>$value) {
+        $positions_html .= '<option value="' . $key . '" ' . selected( $general_position, $key, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
+    }
     ?>
     <table id="tbl_display" class="wprtsp_tbl wprtsp_tbl_display">
         <tr>
@@ -127,6 +136,12 @@ function wpsppro_general_meta_box(){
          <tr id="post_ids_selector">
             <td><label for="wprtsp_general_post_ids">Enter Post Ids (comma separated)</label></td>
             <td><input type="text" class="widefat" <?php if($show_on == 1) {echo 'readonly="true"';} ?> id="wprtsp_general_post_ids" name="wprtsp[general_post_ids]" value="<?php echo $post_ids; ?>"></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp[general_position]">Position</label></td>
+            <td><select id="wprtsp[general_position]" name="wprtsp[general_position]">
+                    <?php echo $positions_html; ?>
+                </select></td>
         </tr>
     </table>
     <table id="tbl_timings" class="wprtsp_tbl wprtsp_tbl_timings">
@@ -186,10 +201,8 @@ function wpsppro_conversions_meta_box(){
     if(! $settings) {
         $settings = wprtsppro_get_cpt_defaults();
     }
-    $defaults = wprtsppro_get_cpt_defaults();
+    
     $settings = wpsppro_sanitize($settings);
-    //llog($settings);
-    //$settings = wp_parse_args($settings, $defaults);
     $conversions_enable = $settings['conversions_enable'];
     $conversions_enable_mob = $settings['conversions_enable_mob'];
     $conversions_title_notification = $settings['conversions_title_notification'];
@@ -198,8 +211,6 @@ function wpsppro_conversions_meta_box(){
     $conversions_transaction_alt = $settings['conversions_transaction_alt'];
     $conversions_sound_notification = $settings['conversions_sound_notification'];
     $conversions_sound_notification_file = $settings['conversions_sound_notification_file'];
-
-    $conversions_position = $settings['conversions_position'];
 
     $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
 
@@ -225,11 +236,7 @@ function wpsppro_conversions_meta_box(){
         $sources_html .= '<option value="' . $value . '" ' . selected( $conversions_shop_type, $value, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
     }
     
-    $positions_html = '';
-    $positions = $defaults['positions'];
-    foreach($positions as $key=>$value) {
-        $positions_html .= '<option value="' . $key . '" ' . selected( $conversions_position, $key, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
-    }
+    
     ?>
     <table id="tbl_conversions" class="wprtsp_tbl wprtsp_tbl_conversions">
         <tr>
@@ -248,12 +255,6 @@ function wpsppro_conversions_meta_box(){
             <td>
                 <input id="wprtsp[conversions_enable_mob]" name="wprtsp[conversions_enable_mob]" type="checkbox" value="1" <?php checked( 1, $conversions_enable_mob, true); ?>/>
             </td>
-        </tr>
-        <tr>
-            <td><label for="wprtsp[conversions_position]">Position</label></td>
-            <td><select id="wprtsp[conversions_position]" name="wprtsp[conversions_position]">
-                    <?php echo $positions_html; ?>
-                </select></td>
         </tr>
         <tr>
             <td><label for="wprtsp_conversions_title_notification">Enable Title Notification</label></td>
