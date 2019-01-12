@@ -7,6 +7,9 @@ remove_action( 'save_post', array( $wprtsp, 'save_meta_box_data' ));
 
 add_action( 'add_meta_boxes', 'wpsppro_add_meta_boxes' );
 add_action( 'save_post', 'wpsppro_save_meta_box_data' );
+add_action( 'wprtsp_enabled', 'wpsppro_enabled', 10, 2 );
+add_filter( 'wprtsp_sanitize', 'wpsppro_sanitize', 10, 2 );
+add_filter( 'wprtsp_get_proof_data_ctas', 'wpsppro_get_proof_data_ctas', 10, 2 );
 
 add_filter('wprtsp_cpt_defaults', 'wprtsppro_get_cpt_defaults');
 //add_filter('wprtsp_get_proofs', 'wprtsppro_get_cpt_defaults');
@@ -16,6 +19,27 @@ add_filter('wprtsp_conversions_sound_notification_markup', 'wprtspro_conversions
 add_filter('wprtsp_sound_notification_file', 'wprtspro_sound_notification_file', 10 , 2);
 
 add_filter('wprtsp_get_proof_data_hotstats_WooCommerce', 'wprtspro_hotstats_wooc', 10, 2);
+
+function wpsppro_enabled($enabled, $settings) {
+   
+    if(!wp_is_mobile()) { // we are on desktop
+        if($settings['conversions_enable'] || $settings['hotstats_enable'] || $settings['livestats_enable'] || $settings['ctas_enable']) {
+            return true;
+        }
+        
+    }
+    else { //we are on mobile
+        if($settings['conversions_enable_mob'] || $settings['hotstats_enable_mob'] || $settings['livestats_enable_mob'] || $settings['ctas_enable_mob']) {
+            return true;
+        }
+    }
+    
+    return $enabled;
+}
+
+function wpsppro_get_proof_data_ctas( $ctas, $settings) {
+    //wprtsp_get_proof_data_ctas
+}
 
 function wprtspro_conversions_sound_notification_markup($markup, $settings){
     $wprtsp = WPRTSP::get_instance();
@@ -27,7 +51,7 @@ function wpsppro_add_meta_boxes(){
     add_meta_box( 'social-proof-pro-conversions', __( 'Recent Conversions', 'erm' ), 'wpsppro_conversions_meta_box', 'socialproof', 'normal');
     add_meta_box( 'social-proof-pro-live', __( 'Live Visitors', 'erm' ), 'wpsppro_live_meta_box', 'socialproof', 'normal');
     add_meta_box( 'social-proof-pro-hot-stats', __( 'Hot Stats', 'erm' ), 'wpsppro_hot_stats_meta_box', 'socialproof', 'normal');
-    add_meta_box( 'social-proof-pro-custom-message', __( 'Custom Calls To Actions', 'erm' ), 'wpsppro_custom_info_meta_box', 'socialproof', 'normal');
+    add_meta_box( 'social-proof-pro-custom-message', __( 'Custom Calls To Actions', 'erm' ), 'wpsppro_ctas_meta_box', 'socialproof', 'normal');
 }
 
 function wprtspro_sound_notification_file($file, $settings){
@@ -52,9 +76,12 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         'conversions_enable_mob' => true, // bool
         
         'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ), // string
-        'conversions_transaction' => 'subscribed to the newsletter', // string
-        'conversions_transaction_alt' => 'registered for the webinar', // string
-        
+        //'conversions_transaction' => 'subscribed to the newsletter', // string
+        //'conversions_transaction_alt' => 'registered for the webinar', // string
+        'conversion_template_line1' => '{name} {location}',
+        'conversion_template_line2' => '{action} {product} {time}',
+        'conversion_generated_action' => 'subscribed to the',
+        'conversion_generated_product' => 'newsletter',
         'conversions_sound_notification' => false, // bool
         'conversions_sound_notification_file' => 'salient.mp3', // string
         
@@ -67,10 +94,16 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         //'conversions_records' => $wprtsp->generate_cpt_records(array('conversions_transaction' => 'subscribed to the newsletter', 'conversions_transaction_alt' => 'registered for the webinar')),
         
         'livestats_enable' => true, // bool
+        'livestats_enable_mob' => true, // bool
         
         'hotstats_enable' => true,
+        'hotstats_enable_mob' => true,
         'hotstats_timeframe' => 1,
         'hotstats_timeframes' => array(1, 2, 3, 7, 30, -1),
+
+        'ctas_enable' => true,
+        'ctas_enable_mob' => true,
+        'ctas' => array()
     );
 
     return $defaults;
@@ -81,34 +114,43 @@ function wpsppro_sanitize( $request ) {
     $defaults = wprtsppro_get_cpt_defaults();
     
     $settings = array();
-    $settings['general_show_on'] = array_key_exists('general_show_on', $request) ? sanitize_text_field( $request['general_show_on'] ) : $defaults['general_show_on'];
-    $settings['general_post_ids'] = array_key_exists('general_post_ids', $request)? sanitize_text_field( $request['general_post_ids'] ) : $defaults['general_post_ids'];
-    $settings['general_position'] = array_key_exists('general_position', $request)? sanitize_text_field( $request['general_position'] ) : $defaults['general_position'];
-    $settings['general_duration'] = array_key_exists('general_duration', $request)? sanitize_text_field( $request['general_duration'] ) : $defaults['general_duration'];
-    $settings['general_initial_popup_time'] = array_key_exists('general_initial_popup_time', $request)? sanitize_text_field( $request['general_initial_popup_time'] ) : $defaults['general_initial_popup_time'];
-    $settings['general_subsequent_popup_time'] = array_key_exists('general_subsequent_popup_time', $request)? sanitize_text_field( $request['general_subsequent_popup_time'] ) : $defaults['general_subsequent_popup_time'];
-    $settings['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? true : false;
+    $request['general_show_on'] = array_key_exists('general_show_on', $request) ? sanitize_text_field( $request['general_show_on'] ) : $defaults['general_show_on'];
+    $request['general_post_ids'] = array_key_exists('general_post_ids', $request)? sanitize_text_field( $request['general_post_ids'] ) : $defaults['general_post_ids'];
+    $request['general_position'] = array_key_exists('general_position', $request)? sanitize_text_field( $request['general_position'] ) : $defaults['general_position'];
+    $request['general_duration'] = array_key_exists('general_duration', $request)? sanitize_text_field( $request['general_duration'] ) : $defaults['general_duration'];
+    $request['general_initial_popup_time'] = array_key_exists('general_initial_popup_time', $request)? sanitize_text_field( $request['general_initial_popup_time'] ) : $defaults['general_initial_popup_time'];
+    $request['general_subsequent_popup_time'] = array_key_exists('general_subsequent_popup_time', $request)? sanitize_text_field( $request['general_subsequent_popup_time'] ) : $defaults['general_subsequent_popup_time'];
+    $request['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? true : false;
 
 
-    $settings['conversions_enable'] = array_key_exists('conversions_enable', $request) && $request['conversions_enable'] ? true : false;
-    $settings['conversions_enable_mob'] = array_key_exists('conversions_enable_mob',  $request) && $request['conversions_enable_mob'] ? true : false;
-    $settings['conversions_title_notification'] = array_key_exists('conversions_title_notification', $request) && $request['conversions_title_notification'] ? true : false;
+    $request['conversions_enable'] = array_key_exists('conversions_enable', $request) && $request['conversions_enable'] ? true : false;
+    $request['conversions_enable_mob'] = array_key_exists('conversions_enable_mob',  $request) && $request['conversions_enable_mob'] ? true : false;
+    $request['conversions_title_notification'] = array_key_exists('conversions_title_notification', $request) && $request['conversions_title_notification'] ? true : false;
 
-    $settings['conversions_shop_type'] = array_key_exists('conversions_shop_type', $request)?sanitize_text_field($request['conversions_shop_type'] ) : $defaults['general_post_ids'];
-    $settings['conversions_transaction'] = array_key_exists('conversions_transaction', $request)? sanitize_text_field( $request['conversions_transaction'] ) : $defaults['conversions_transaction'];
-    $settings['conversions_transaction_alt'] = array_key_exists('conversions_transaction_alt', $request)? sanitize_text_field( $request['conversions_transaction_alt'] ) : $defaults['conversions_transaction_alt'];
-    $settings['conversions_sound_notification'] = array_key_exists('conversions_sound_notification', $request) && $request['conversions_sound_notification'] ? true : false;
-    $settings['conversions_sound_notification_file'] = array_key_exists('conversions_sound_notification_file', $request) ? sanitize_text_field($request['conversions_sound_notification_file'] ) : $defaults['conversions_sound_notification_file'];
-    $settings['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? true : false;
+    $request['conversions_shop_type'] = array_key_exists('conversions_shop_type', $request)?sanitize_text_field($request['conversions_shop_type'] ) : $defaults['general_post_ids'];
+    $request['conversion_generated_action'] = array_key_exists('conversion_generated_action', $request)? sanitize_text_field( $request['conversion_generated_action'] ) : $defaults['conversion_generated_action'];
+    $request['conversion_generated_product'] = array_key_exists('conversion_generated_product', $request)? sanitize_text_field( $request['conversion_generated_product'] ) : $defaults['conversion_generated_product'];
+    
+    $request['conversion_template_line1'] = array_key_exists('conversion_template_line1', $settings) ? sanitize_text_field($request['conversion_template_line1']) :  $defaults['conversion_template_line1'];
+    $request['conversion_template_line2'] = array_key_exists('conversion_template_line2', $settings) ? sanitize_text_field($request['conversion_template_line2']) :  $defaults['conversion_template_line2'];
 
-    $settings['livestats_enable'] = array_key_exists('livestats_enable', $request) && $request['hotstats_enable'] ? true : false;
-    $settings['hotstats_enable'] = array_key_exists('hotstats_enable', $request) && $request['hotstats_enable'] ? true : false;
-    $settings['hotstats_timeframe'] = array_key_exists('hotstats_timeframe', $request) ? sanitize_text_field($request['hotstats_timeframe']) : $defaults['hotstats_timeframe'];
+    $request['conversions_sound_notification'] = array_key_exists('conversions_sound_notification', $request) && $request['conversions_sound_notification'] ? true : false;
+    $request['conversions_sound_notification_file'] = array_key_exists('conversions_sound_notification_file', $request) ? sanitize_text_field($request['conversions_sound_notification_file'] ) : $defaults['conversions_sound_notification_file'];
+    $request['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? true : false;
 
-    $settings['ctas'] = array_key_exists('ctas', $request)? $request['ctas']: array();
+    $request['livestats_enable'] = array_key_exists('livestats_enable', $request) && $request['livestats_enable'] ? true : false;
+    $request['livestats_enable_mob'] = array_key_exists('livestats_enable_mob', $request) && $request['livestats_enable_mob'] ? true : false;
+    
+    $request['hotstats_enable'] = array_key_exists('hotstats_enable', $request) && $request['hotstats_enable'] ? true : false;
+    $request['hotstats_enable_mob'] = array_key_exists('hotstats_enable_mob', $request) && $request['hotstats_enable_mob'] ? true : false;
+    $request['hotstats_timeframe'] = array_key_exists('hotstats_timeframe', $request) ? sanitize_text_field($request['hotstats_timeframe']) : $defaults['hotstats_timeframe'];
+    
+    $request['ctas_enable'] = array_key_exists('ctas_enable', $request) && $request['ctas_enable'] ? true : false;
+    $request['ctas_enable_mob'] = array_key_exists('ctas_enable_mob', $request) && $request['ctas_enable_mob'] ? true : false;
+    $request['ctas'] = array_key_exists('ctas', $request)? array_filter($request['ctas']): array();
 
     //$settings['conversions_records'] = array_key_exists('conversions_records');
-    return $settings;
+    return $request;
 }
 
 function wpsppro_general_meta_box(){
@@ -122,7 +164,7 @@ function wpsppro_general_meta_box(){
     if(! $settings) {
         $settings = $defaults;
     }
-    //llog($settings);
+
     $settings = wpsppro_sanitize($settings);
     $show_on = $settings['general_show_on'];
     $post_ids = $settings['general_post_ids'];
@@ -229,8 +271,10 @@ function wpsppro_conversions_meta_box(){
     $conversions_enable_mob = $settings['conversions_enable_mob'];
     $conversions_title_notification = $settings['conversions_title_notification'];
     $conversions_shop_type = $settings['conversions_shop_type'];
-    $conversions_transaction = $settings['conversions_transaction'];
-    $conversions_transaction_alt = $settings['conversions_transaction_alt'];
+    $conversion_generated_action = $settings['conversion_generated_action'];
+    $conversion_generated_product = $settings['conversion_generated_product'];
+    $conversion_template_line1 = $settings['conversion_template_line1'];
+    $conversion_template_line2 = $settings['conversion_template_line2'];
     $conversions_sound_notification = $settings['conversions_sound_notification'];
     $conversions_sound_notification_file = $settings['conversions_sound_notification_file'];
 
@@ -297,12 +341,19 @@ function wpsppro_conversions_meta_box(){
                 </select></td>
         </tr>
         <tr>
-            <td><label for="wprtsp_conversions_transaction">Transaction 1 for Generated Records</label></td>
-            <td><input id="wprtsp_conversions_transaction" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversions_transaction]" type="text" class="widefat" value="<?php echo $conversions_transaction ?>" /></td>
+            <td>Template</td>
+            <td>
+                <label>Line 1: <input type="text" value="<?php echo $conversion_template_line1; ?>" name="wprtsp[conversion_template_line1]" class="widefat" /></label><br />
+                <label>Line 2: <input type="text" value="<?php echo $conversion_template_line2; ?>" name="wprtsp[conversion_template_line2]" class="widefat"/></label>
+            </td>
         </tr>
-        <tr>
-            <td><label for="wprtsp_conversions_transaction_alt">Transaction 2 for Generated Records</label></td>
-            <td><input id="wprtsp_conversions_transaction_alt" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversions_transaction_alt]" type="text" class="widefat" value="<?php echo $conversions_transaction_alt ?>" /></td>
+        <tr class="generated_transactions">
+            <td><label for="wprtsp_conversion_generated_action">Action for Generated records</label></td>
+            <td><input id="wprtsp_conversion_generated_action" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversion_generated_action]" type="text" class="widefat" value="<?php echo $conversion_generated_action ?>" /></td>
+        </tr>
+        <tr class="generated_transactions">
+            <td><label for="wprtsp_conversion_generated_product">Product for Generated records</label></td>
+            <td><input id="wprtsp_conversion_generated_product" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversion_generated_product]" type="text" class="widefat" value="<?php echo $conversion_generated_product ?>" /></td>
         </tr>
     </table>
     <script type="text/javascript">
@@ -364,17 +415,30 @@ function wpsppro_live_meta_box(){
     
     $settings = wpsppro_sanitize($settings);
     $livestats_enable = $settings['livestats_enable'];
+    $livestats_enable_mob = $settings['livestats_enable_mob'];
     ?>
     <table id="tbl_livestats" class="wprtsp_tbl wprtsp_tbl_livestats">
         <thead>
             <tr>
-                <th>
-                    <h3>Show number of live visitors?</h3>
+                <th colspan="2">
+                    <h3>Show number of live visitors</h3>
                 </th>
-                <th>
-                <input id="wprtsp[livestats_enable]" name="wprtsp[livestats_enable]" type="checkbox" value="1" <?php checked( $livestats_enable, '1' , true); ?>/>
-                </th>
-
+            </tr>
+            <tr>
+                <td>
+                    <label for="wprtsp_livestats_enable">Enable on Desktop</label>
+                </td>
+                <td>
+                    <input id="wprtsp_livestats_enable" name="wprtsp[livestats_enable]" type="checkbox" value="1" <?php checked( $livestats_enable, '1' , true); ?>/>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="wprtsp_livestats_enable_mob">Enable on Mobile</label>
+                </td>
+                <td>
+                    <input id="wprtsp_livestats_enable_mob" name="wprtsp[livestats_enable_mob]" type="checkbox" value="1" <?php checked( $livestats_enable_mob, '1' , true); ?>/>
+                </td>
             </tr>
         </thead>
     </table>
@@ -390,6 +454,7 @@ function wpsppro_hot_stats_meta_box(){
     }
     $settings = wpsppro_sanitize($settings);
     $hotstats_enable = array_key_exists('hotstats_enable',$settings) ? $settings['hotstats_enable'] : $defaults['hotstats_enable'];
+    $hotstats_enable_mob = array_key_exists('hotstats_enable_mob',$settings) ? $settings['hotstats_enable_mob'] : $defaults['hotstats_enable_mob'];
     $hotstats_timeframe = array_key_exists('hotstats_timeframe',$settings) ? $settings['hotstats_timeframe'] : $defaults['hotstats_timeframe'];
     
     $timeframes = $defaults['hotstats_timeframes'];
@@ -416,22 +481,23 @@ function wpsppro_hot_stats_meta_box(){
             </tr>
         </thead>
         <tr>
-            <td>Enable Hot Stats?</td>
-            <td><input id="wprtsp[hotstats_enable]" name="wprtsp[hotstats_enable]" type="checkbox" value="1" <?php checked( $hotstats_enable, '1' , true); ?>/></td>
+            <td><label for="wprtsp_hotstats_enable">Enable Hot Stats on Desktop</label></td>
+            <td><input id="wprtsp_hotstats_enable" name="wprtsp[hotstats_enable]" type="checkbox" value="1" <?php checked( $hotstats_enable, '1' , true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_hotstats_enable_mob">Enable Hot Stats on Mobile</label></td>
+            <td><input id="wprtsp_hotstats_enable_mob" name="wprtsp[hotstats_enable_mob]" type="checkbox" value="1" <?php checked( $hotstats_enable_mob, '1' , true); ?>/></td>
         </tr>
         <tr>
             <td>Show number of sales since</td>
             <td><?php echo $positions_html; ?></td>
         </tr>
-        <tr>
-            <td></td>
-            <td></td>
-        </tr>
+        
     </table>
     <?php
 }
 
-function wpsppro_custom_info_meta_box(){
+function wpsppro_ctas_meta_box(){
     global $post;
     $wprtsp = WPRTSP::get_instance();
 
@@ -442,6 +508,8 @@ function wpsppro_custom_info_meta_box(){
     $defaults = wprtsppro_get_cpt_defaults();
     $settings = wpsppro_sanitize($settings);
     $ctas = $settings['ctas'];
+    $ctas_enable = array_key_exists('ctas_enable',$settings) ? $settings['ctas_enable'] : $defaults['ctas_enable'];
+    $ctas_enable_mob = array_key_exists('ctas_enable_mob',$settings) ? $settings['ctas_enable_mob'] : $defaults['ctas_enable_mob'];
     ?>Add custom calls to action such as offers, discount coupons etc.
     
     <table id="ctas-fieldset-one" width="100%">
@@ -517,9 +585,6 @@ function wpsppro_save_meta_box_data($post_id) {
     $settings = wpsppro_sanitize($_POST['wprtsp']);
     
     $settings = apply_filters('wprtsp_cpt_update_settings', $settings);
-    //llog($_POST);
-    //llog($settings);
-    //die();
     //$settings['records'] = $wprtsp->generate_cpt_records($settings);
     //$wprtsp->generate_edd_records();
     //$wprtsp->generate_wooc_records();
