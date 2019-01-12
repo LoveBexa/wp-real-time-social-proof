@@ -38,7 +38,9 @@ function wpsppro_enabled($enabled, $settings) {
 }
 
 function wpsppro_get_proof_data_ctas( $ctas, $settings) {
-    //wprtsp_get_proof_data_ctas
+    $ctas = $settings['ctas'];
+    return array_values($ctas);
+    
 }
 
 function wprtspro_conversions_sound_notification_markup($markup, $settings){
@@ -103,7 +105,7 @@ function wprtsppro_get_cpt_defaults($settings = array()){
 
         'ctas_enable' => true,
         'ctas_enable_mob' => true,
-        'ctas' => array()
+        'ctas' => array( array('title' => 'Offer just for you', 'message' => 'Get 15% discount with coupon INSERTCOUPONHERE'))
     );
 
     return $defaults;
@@ -147,7 +149,7 @@ function wpsppro_sanitize( $request ) {
     
     $request['ctas_enable'] = array_key_exists('ctas_enable', $request) && $request['ctas_enable'] ? true : false;
     $request['ctas_enable_mob'] = array_key_exists('ctas_enable_mob', $request) && $request['ctas_enable_mob'] ? true : false;
-    $request['ctas'] = array_key_exists('ctas', $request)? array_filter($request['ctas']): array();
+    $request['ctas'] = array_key_exists('ctas', $request)? array_values($request['ctas']) : $defaults['ctas'];
 
     //$settings['conversions_records'] = array_key_exists('conversions_records');
     return $request;
@@ -515,34 +517,32 @@ function wpsppro_ctas_meta_box(){
     <table id="ctas-fieldset-one" width="100%">
         <thead>
             <tr>
-                <th width="40%">Message</th>
+                <th width="40%">Title</th>
+                <th width="40%">Call To Action</th>
                 <th width="8%"></th>
             </tr>
         </thead>
         <tbody>
-        <?php
-        if ( $ctas ) {
-            foreach ( $ctas as $cta ) {
-                if( ! empty($cta) ) { ?>
-                <tr>
-                    <td><input type="text" class="widefat" name="wprtsp[ctas][]" value="<?php if($cta != '') echo esc_attr( $cta ); ?>" /></td>
-                    <td><a class="button remove-row" href="#">Remove</a></td>
-                </tr>
                 <?php
+               
+                $count = count($ctas);
+               
+                for($i = 0 ; $i < $count; $i++) {
+                    $elem = array_shift($ctas);
+                    
+                ?>
+                    <tr>
+                        <td><input type="text" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][title]" value="<?php echo $elem['title']; ?>" /></td>
+                        <td><input type="text" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][message]" value="<?php echo $elem['message']; ?>" /></td>
+                        <td><a class="button remove-row" href="#">Remove</a></td>
+                    </tr>
+                <?php
+                
                 }
-            }
-        }
-        else { ?>
-                <tr>
-                    <td><input type="text" class="widefat" name="wprtsp[ctas][]" /></td>
-                    <td><a class="button remove-row" href="#">Remove</a></td>
-                </tr>
-                <?php 
-        }
-        ?>
-            <!-- empty hidden one for jQuery -->
-            <tr class="empty-row screen-reader-text">
-                <td><input type="text" class="widefat" name="wprtsp[ctas][]" /></td>
+                ?>
+                <tr class="empty-row screen-reader-text">
+                    <td><input type="text" id="ctas_title_empty" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][title]" /></td>
+                    <td><input type="text" id="ctas_message_empty" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][message]" /></td>
                 <td><a class="button remove-row" href="#">Remove</a></td>
             </tr>
         </tbody>
@@ -550,9 +550,12 @@ function wpsppro_ctas_meta_box(){
     <p><a id="add-row" class="button" href="#">Add another</a></p>
     <script type="text/javascript">
     $( '#add-row' ).on('click', function() {
+        $time = new Date().getTime();
             var row = $( '.empty-row.screen-reader-text' ).clone(true);
             row.removeClass( 'empty-row screen-reader-text' );
             row.insertBefore( '#ctas-fieldset-one tbody>tr:last' );
+            $('#ctas_title_empty').attr('name', function(){$(this).removeAttr('id'); return 'wprtsp[ctas]['+$time+'][title]'});
+            $('#ctas_message_empty').attr('name', function(){$(this).removeAttr('id');return 'wprtsp[ctas]['+$time+'][message]'});
             return false;
         });
         
@@ -566,7 +569,8 @@ function wpsppro_ctas_meta_box(){
 }
 
 function wpsppro_save_meta_box_data($post_id) {
-    
+    //llog($_POST);
+    //die();
     $wprtsp = WPRTSP::get_instance();
     
     if ( ! isset( $_POST['socialproof_meta_box_nonce'] ) ||
@@ -588,7 +592,8 @@ function wpsppro_save_meta_box_data($post_id) {
     //$settings['records'] = $wprtsp->generate_cpt_records($settings);
     //$wprtsp->generate_edd_records();
     //$wprtsp->generate_wooc_records();
-    
+    //llog($settings);
+    //die();
     update_post_meta( $post_id, '_socialproof', $settings );
 }
 
