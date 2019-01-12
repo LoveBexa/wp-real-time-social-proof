@@ -149,7 +149,18 @@ function wpsppro_sanitize( $request ) {
     
     $request['ctas_enable'] = array_key_exists('ctas_enable', $request) && $request['ctas_enable'] ? true : false;
     $request['ctas_enable_mob'] = array_key_exists('ctas_enable_mob', $request) && $request['ctas_enable_mob'] ? true : false;
-    $request['ctas'] = array_key_exists('ctas', $request)? array_values($request['ctas']) : $defaults['ctas'];
+    
+    if(array_key_exists('ctas', $request)) {
+        $ctas = $request['ctas'];
+        foreach($ctas as $cta => $value) {
+        
+            if(empty($value['title']) && empty($value['message'])) {
+                unset($ctas[$cta]);
+            }
+        }
+    }
+
+    $request['ctas'] = isset($ctas)? array_values($ctas) : $defaults['ctas'];
 
     //$settings['conversions_records'] = array_key_exists('conversions_records');
     return $request;
@@ -455,9 +466,9 @@ function wpsppro_hot_stats_meta_box(){
         $settings = $defaults;
     }
     $settings = wpsppro_sanitize($settings);
-    $hotstats_enable = array_key_exists('hotstats_enable',$settings) ? $settings['hotstats_enable'] : $defaults['hotstats_enable'];
-    $hotstats_enable_mob = array_key_exists('hotstats_enable_mob',$settings) ? $settings['hotstats_enable_mob'] : $defaults['hotstats_enable_mob'];
-    $hotstats_timeframe = array_key_exists('hotstats_timeframe',$settings) ? $settings['hotstats_timeframe'] : $defaults['hotstats_timeframe'];
+    $hotstats_enable = $settings['hotstats_enable'];
+    $hotstats_enable_mob = $settings['hotstats_enable_mob'];
+    $hotstats_timeframe = $settings['hotstats_timeframe'];
     
     $timeframes = $defaults['hotstats_timeframes'];
     $positions_html = '';
@@ -499,7 +510,7 @@ function wpsppro_hot_stats_meta_box(){
     <?php
 }
 
-function wpsppro_ctas_meta_box(){
+function wpsppro_ctas_meta_box() {
     global $post;
     $wprtsp = WPRTSP::get_instance();
 
@@ -510,10 +521,27 @@ function wpsppro_ctas_meta_box(){
     $defaults = wprtsppro_get_cpt_defaults();
     $settings = wpsppro_sanitize($settings);
     $ctas = $settings['ctas'];
-    $ctas_enable = array_key_exists('ctas_enable',$settings) ? $settings['ctas_enable'] : $defaults['ctas_enable'];
-    $ctas_enable_mob = array_key_exists('ctas_enable_mob',$settings) ? $settings['ctas_enable_mob'] : $defaults['ctas_enable_mob'];
-    ?>Add custom calls to action such as offers, discount coupons etc.
-    
+    $ctas_enable =  $settings['ctas_enable'];
+    $ctas_enable_mob =  $settings['ctas_enable_mob'];
+    ?>
+    <table id="tbl_ctas" class="wprtsp_tbl wprtsp_tbl_ctas">
+    <thead>
+            <tr>
+                <th colspan="2">
+                    <h3>Add custom calls to action such as offers, discount coupons etc.</h3>
+                </th>
+
+            </tr>
+        </thead>
+        <tr>
+            <td><label for="wprtsp_ctas_enable">Enable Hot Stats on Desktop</label></td>
+            <td><input id="wprtsp_ctas_enable" name="wprtsp[ctas_enable]" type="checkbox" value="1" <?php checked( $ctas_enable, '1' , true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_ctas_enable_mob">Enable Hot Stats on Mobile</label></td>
+            <td><input id="wprtsp_ctas_enable_mob" name="wprtsp[ctas_enable_mob]" type="checkbox" value="1" <?php checked( $ctas_enable_mob, '1' , true); ?>/></td>
+        </tr>
+    </table>
     <table id="ctas-fieldset-one" width="100%">
         <thead>
             <tr>
@@ -592,8 +620,7 @@ function wpsppro_save_meta_box_data($post_id) {
     //$settings['records'] = $wprtsp->generate_cpt_records($settings);
     //$wprtsp->generate_edd_records();
     //$wprtsp->generate_wooc_records();
-    //llog($settings);
-    //die();
+   
     update_post_meta( $post_id, '_socialproof', $settings );
 }
 
