@@ -53,7 +53,7 @@ class WPRTSP {
 
     function includes(){
         if( file_exists( $this->dir . 'pro/pro.php') ) {
-            //include_once( $this->dir . 'pro/pro.php' );
+            include_once( $this->dir . 'pro/pro.php' );
         }
     }
 
@@ -67,15 +67,17 @@ class WPRTSP {
         //add_action( 'wp_ajax_wprtsp_handle_ajax', array( $this, 'wprtsp_ajax_handler' ) );
         //add_action( 'wp_ajax_nopriv_wprtsp_handle_ajax', array( $this, 'wprtsp_ajax_handler' ) );
 
-        //add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts') );
-        add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_fingerprint') );
-        add_action( 'wp_footer',  array( $this, 'wprtsp_footer_scripts') );
+        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts') );
+        //add_action( 'wp_enqueue_scripts',  array( $this, 'enqueue_fingerprint') );
+        //add_action( 'wp_footer',  array( $this, 'wprtsp_footer_scripts') );
         add_action( 'add_meta_boxes', array( $this,'add_meta_boxes' ) );
         add_action( 'save_post', array($this, 'save_meta_box_data' ) );
         //add_filter('wprtsp_get_proofs', array($this, 'wprtsp_get_proofs'));
-        add_filter('wprtsp_get_proof_data_conversions_WooCommerce', array($this, 'get_wooc_conversions'));
-        add_filter('wprtsp_get_proof_data_conversions_Easy_Digital_Downloads', array($this, 'get_edd_conversions'));
-        add_action( 'wprtsp_general_meta_settings',array( $this, 'wprtsppro_general_meta' ) );
+        add_filter('wprtsp_vars', array($this, 'wprtsp_get_proofs'));
+        add_filter('wprtsp_get_proof_data_conversions_WooCommerce', array( $this, 'get_wooc_conversions'), 10, 2 );
+        add_filter('wprtsp_get_proof_data_conversions_Easy_Digital_Downloads', array( $this, 'get_edd_conversions'), 10, 2 );
+        add_filter('wprtsp_get_proof_data_conversions_Generated', array( $this, 'get_generated_conversions'), 10, 2 );
+        add_action('wprtsp_general_meta_settings',array( $this, 'wprtsppro_general_meta' ) );
         
         //add_action( 'in_plugin_update_message'. basename(__DIR__).'/'.basename(__FILE__), array($this, 'plugin_update_message'), 10, 2 );
     }
@@ -86,71 +88,96 @@ class WPRTSP {
         }
     }
 
-    function wprtsp_footer_scripts() {
+    function enqueue_scripts(){
+        $notifications  = get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
+        $active_notifications = array();
+        foreach($notifications as $notification) {
+            $meta = get_post_meta( $notification->ID, '_socialproof', true );
+            $show_on = $meta['general_show_on'];
+            //$this->llog($meta);
+            switch($show_on) {
+                case '1':
+                    //if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
+                        //$social_proof_settings = $this->get_cpt_settings( $notification->ID );
+                        //wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
+                        wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('jquery'), null, true);
+                        wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( apply_filters('wprtsp_vars', $meta ) ) );
+                    //}
+                    break;
+                case '2': 
+                    if(! is_array($post_ids)) {
+                        if(strpos($post_ids, ',') !== false ){
+                            $post_ids = explode(',', $post_ids);
+                        }
+                        else {
+                            $post_ids = array($post_ids);
+                        }
+                    }
+                    if( is_singular()  && in_array(get_the_ID(), $post_ids) ) {
+                        //if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
+                            //$social_proof_settings = $this->get_cpt_settings( $notification->ID );
+                            //wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
+                            wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('jquery'), null, true);
+                            wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( apply_filters('wprtsp_vars', $meta ) ) );
+                        //}
+                    }
+                    break;
+                case '3':
+                    $post_ids = $meta['general_post_ids'];
+                        if(! is_array($post_ids)) {
+                            if(strpos($post_ids, ',') !== false ){
+                                $post_ids = explode(',', $post_ids);
+                            }
+                            else {
+                                $post_ids = array($post_ids);
+                            }
+                        }
+                        if(  ! is_singular() || (is_singular()  && ! in_array(get_the_ID(), $post_ids) ) ) {
+                            //if(apply_filters('wprtsp_enabled', $meta['conversions_enable'], $meta)) {
+                                //$social_proof_settings = $this->get_cpt_settings( $notification->ID );
+                                //wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);
+                                wp_enqueue_script( 'wprtsp-main', $this->uri .'assets/wprtspcpt.js', array('jquery'), null, true);
+                                wp_localize_script( 'wprtsp-main', 'wprtsp_vars', json_encode( apply_filters('wprtsp_vars', $meta ) ) );
+                            //}
+                        }
+                    break;
+            }
+        }
+    }
+
+    function wprtsp_get_proofs($settings){
+        
+        $conversions = apply_filters('wprtsp_get_proof_data_conversions_'.$settings['conversions_shop_type'], $settings);
+        $hotstats = apply_filters('wprtsp_get_proof_data_hotstats_'.$settings['conversions_shop_type'], array(), $settings);
+        $livestats = apply_filters('wprtsp_get_proof_data_livestats', array(), $settings);
+        $ctas = apply_filters('wprtsp_get_proof_data_ctas', array(), $settings);
+        
+        $settings['proofs']['conversions'] = $conversions;
+        $settings['proofs']['hotstats'] = $hotstats;
+        $settings['proofs']['livestats'] = $livestats;
+        $settings['proofs']['ctas'] = $ctas;
+        return $settings;
+    }
+
+    function footer_scripts() {
         $settings = $this->wprtsp_get_notification();
-        $this->llog($settings);
+        //$this->llog($settings);
+        $conversions = array();
         if($settings['conversions_enable']) {
             $conversions = apply_filters('wprtsp_get_proof_data_conversions_'.$settings['conversions_shop_type'], array(), $settings);
         }
-        //$this->llog($conversions);
-        
+        if($settings['hotstats_enable']) {
+            $hotstats = array();
+            $hotstats = apply_filters('wprtsp_get_proof_data_hotstats_'.$settings['conversions_shop_type'], $hotstats, $settings['hotstats_timeframe']);
+            //$this->llog($hotstats);
+        }
             ?>
-            <script type="text/javascript">
-            var clock;
-            wprtsp_settings = (<?php echo json_encode($settings) ; ?>);
-            if(wprtsp_settings.conversions_enable){
-                wprtsp_conversions = <?php echo json_encode($conversions); ?>;
-                wprtsp_conversions_messages = [];
-                for(i = 0; i < wprtsp_conversions.length ; i++) {
-                    wprtsp_conversions_messages.push('<span class="wprtsp_container_wrap" style="<?php echo $this->get_cocontainer_wrap_style(); ?>"><a class="wprtsp_conversion_image" style="<?php echo $this->get_conversion_image_style(); ?>" href="' + wprtsp_conversions[i]['link'] +'"></a><span class="wprtsp_conversion_text" style="<?php echo $this->get_conversion_text_style(); ?>"><a href="' + wprtsp_conversions[i]['link'] +'"><span class="wprtsp_conversion_line1" style="<?php echo $this->get_conversion_line1_style(); ?>">'+wprtsp_conversions[i]['name']+'</span> <span class="wprtsp_conversion_line2" style="<?php echo $this->get_conversion_line2_style() ; ?>">purchased '+wprtsp_conversions[i]['product']+ ' ' + wprtsp_conversions[i]['time'] +' ago</span></a></span></span>');
-                }
-                //console.log(wprtsp_conversions_messages);
-            }
-            //console.log(wprtsp_conversions);
-            if(jQuery) {
-                jQuery(document).ready(function ($) {
-                    var wprtsp_pop = jQuery('#wprtsp_pop').length ? jQuery('#wprtsp_pop') : jQuery('<span/>', {
-                        id: 'wprtsp_pop',
-                        class: 'wprtsp_pop',
-                    }).appendTo('body');
-                    wprtsp_pop.attr('style', '<?php echo $this->get_popup_container_style($settings) ?>');
-                    clock = setTimeout(wprtsp_show_message, wprtsp_settings.general_initial_popup_time * 1000);
-
-                    function wprtsp_show_message() {
-                        console.log(wprtsp_conversions_messages.length);
-                        $message = wprtsp_get_message();
-                        wprtsp_pop.html( $message ).slideDown(200).delay(<?php echo (int) $settings['general_duration'] * 1000; ?>).fadeOut(2000, function(){
-                            if(wprtsp_conversions_messages.length){
-                                clock = setTimeout(wprtsp_show_message, wprtsp_settings.general_subsequent_popup_time * 1000);
-                            }
-                        });
-
-                        jQuery('#wprtsp_pop').mouseover( function () {
-                            wprtsp_pop.stop( true, true ).show(200);
-                        }).mouseout( function () {
-                            wprtsp_pop.stop( true, true ).delay(200).fadeOut(2000, function(){
-                                if(wprtsp_conversions_messages.length){
-                                    clock = setTimeout(wprtsp_show_message, wprtsp_settings.general_subsequent_popup_time * 1000);
-                                }
-                            });
-                        });
-                    }
-
-                    function wprtsp_get_message(){
-                        return wprtsp_conversions_messages.shift();
-                    }
-
-                });
-            }
-            else {
-                console.log('no jq');
-            }
-            </script>
+            
             <?php
         
     }
 
-    function get_cocontainer_wrap_style(){
+    function get_container_wrap_style(){
         return 'display:flex;align-items:center;line-height: 1em;';
     }
 
@@ -161,6 +188,7 @@ class WPRTSP {
     function get_conversion_text_style(){
         return 'display:table; font-weight:bold; font-size: 14px; line-height: 1em;';
     }
+
     function get_conversion_line1_style(){
         return apply_filters('wprtsp_popup_style_line1', 'display:block;white-space: nowrap;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,helvetica,arial,sans-serif !important; font-size: 14px;font-weight: 600;');
     }
@@ -181,6 +209,7 @@ class WPRTSP {
     }
 
     function get_wooc_conversions() {
+        //$this->llog('hello from wooc');
         if( ! class_exists('WooCommerce') ) {
             return false;
         }
@@ -196,6 +225,7 @@ class WPRTSP {
         $messages = array();
         foreach($orders as $purchase) {
             $order = wc_get_order($purchase);
+            $order_data = $order->get_data();
             
             $user = $order->get_user();
             if(!empty($user)) {
@@ -220,9 +250,10 @@ class WPRTSP {
             $time = new WC_DateTime( $order->get_date_completed() );
             $customers[$purchase]['time'] = human_time_diff($time->getTimestamp());
             $messages[] = array(
-                'link' => $customers[$purchase]['product_link'],
                 'name' => $name,
+                'link' => $customers[$purchase]['product_link'],
                 'product' => $customers[$purchase]['product'],
+                'location' => $order_data['billing']['city'] . ', ' . $order_data['billing']['country'],
                 'time' => $customers[$purchase]['time']
             );
         }
@@ -247,6 +278,7 @@ class WPRTSP {
             foreach ( $payments as $payment_post ) { 
                 setup_postdata($payment_post);
                 $payment      = new EDD_Payment( $payment_post->ID );
+                $this->llog($payment);
                 if(empty($payment->ID)) {
                     continue;
                 }
@@ -256,6 +288,14 @@ class WPRTSP {
                 $downloads = $payment->cart_details;
                 $downloads = array_slice($downloads, 0, 1, true);
                 $name = '';
+                $address = array_key_exists('address', $payment->user_info) ? $payment->user_info['address'] : false;
+                if($address) {
+                    $address = $payment->user_info['address']['city'] . ' ' . $payment->user_info['address']['country'];
+                    if(empty(trim($address))) {
+                        $address = false;
+                    }
+
+                }
                 if( array_key_exists('first_name', $payment->user_info) && ! empty( $payment->user_info['first_name'] ) ) {
                     $name = $payment->user_info['first_name'];
                 }
@@ -267,9 +307,10 @@ class WPRTSP {
                 }
                 $records[$payment_post->ID] = array('product_link'=>get_permalink( $downloads[0]['id'] ),'first_name' => $payment->user_info['first_name'], 'last_name' => $payment->user_info['last_name'], 'transaction' => 'purchased', 'product' => $downloads[0]['name'] , 'time' => $payment_time);
                 $messages[] = array(
-                    'link' => get_permalink( $downloads[0]['id'] ),
                     'name' => $name,
+                    'link' => get_permalink( $downloads[0]['id'] ),
                     'product' => $downloads[0]['name'],
+                    'location' => $address,
                     'time' => $payment_time
                 );
                 //apply_filters('wprtsp_edd_conversion_message','<a href="'.get_permalink( $downloads[0]['id'] ).'"><span class="wprtsp_conversion_icon" style="'.$this->get_conversion_icon_style().'"></span><span class="wprtsp_line1" style="'. $this->get_message_style_line1() . '">' . $name . '</span><span class="wprtsp_line2" style="' . $this->get_message_style_line2() . '"> purchased ' . $downloads[0]['name'] . ' ' . $payment_time . ' ago.</span></a>',$records[$payment_post->ID]);
@@ -280,6 +321,29 @@ class WPRTSP {
         return $messages;
     }
 
+    function get_generated_conversions($settings){
+        $transaction = $settings['conversions_transaction'];
+        $transaction_alt = $settings['conversions_transaction_alt'];
+        $indexes = array();
+        reset( $this->names );
+        reset( $this->locations );
+        for ( $i=0; $i < 100; $i++ ) {
+            mt_srand( $this->make_seed() );
+            $randval = mt_rand();
+            //$name = explode(' ', current($this->names));
+            $indexes[$i] = array(
+                'name' => current($this->names),
+                'link' => '',
+                'product' => '',
+                'location' =>  current($this->locations),
+                'time',
+                'transaction' => ($randval % 2) ? $transaction : $transaction_alt
+            );
+            next($this->locations);
+            next($this->names);
+        }
+        return $indexes;
+    }
 
     function wprtsp_get_notification() {
         $notifications  = get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
@@ -480,7 +544,7 @@ class WPRTSP {
         else {
             do_action('wprtsp_general_meta_settings');
         }
-        $this->llog($settings);
+        //$this->llog($settings);
     }
 
     function conversions_meta_box(){
@@ -658,7 +722,6 @@ class WPRTSP {
         register_post_type( 'socialproof', apply_filters( 'socialproof_post_type_args', $cpt_args ) );
     }
 
-    /* Get the engine going */
     private function __construct() {}
 
     function respond_to_browser($response, $data, $screen_id) {
@@ -683,7 +746,7 @@ class WPRTSP {
         return $sec + $usec * 1000000;
     }
 
-    function get_cpt_settings( $notification_id ){
+    /* function get_cpt_settings( $notification_id ){
         $meta = get_post_meta($notification_id, '_socialproof', true);
         return $meta;
         $position = $meta['general_position'];
@@ -720,7 +783,7 @@ class WPRTSP {
                 'conversionstats' => array(
                     'conversions_shop_type' => $vars['conversions_shop_type'],
                     ),
-                /*
+                
                 'livestats' => array(
                     'visitors' => true
                     ),
@@ -729,11 +792,11 @@ class WPRTSP {
                         'transaction_type' => $vars['transaction_type'],
                         'duration' => $vars['transaction_type'],
                     ),
-                */
+                
                 )
             );
         return $vars;
-    }
+    } */
 
     /* Add links below the plugin name on the plugins page */
     function plugin_action_links($links){
@@ -752,24 +815,6 @@ class WPRTSP {
             wp_enqueue_style( 'wprtsp-cpt', $this->uri . 'assets/cpt-styles.css' );
         }
         
-    }
-
-    function generate_cpt_records($settings){
-        
-        $transaction = $settings['conversions_transaction'];
-        $transaction_alt = $settings['conversions_transaction_alt'];
-        $indexes = array();
-        reset( $this->names );
-        reset( $this->locations );
-        for ( $i=0; $i < 100; $i++ ) {
-            mt_srand( $this->make_seed() );
-            $randval = mt_rand();
-            $name = explode(' ', current($this->names));
-            $indexes[$i] = array('first_name' => $name[0], 'last_name' => $name[1], 'location' =>  current($this->locations), 'transaction' => ($randval % 2) ? $transaction : $transaction_alt );
-            next($this->locations);
-            next($this->names);
-        }
-        return $indexes;
     }
 
     /* Outputs any variable / php objects / arrays in a clear visible frmat */
