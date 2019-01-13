@@ -10,6 +10,7 @@ add_action( 'save_post', 'wpsppro_save_meta_box_data' );
 add_action( 'wprtsp_enabled', 'wpsppro_enabled', 10, 2 );
 add_filter( 'wprtsp_sanitize', 'wpsppro_sanitize', 10, 2 );
 add_filter( 'wprtsp_get_proof_data_ctas', 'wpsppro_get_proof_data_ctas', 10, 2 );
+add_action( 'admin_enqueue_scripts', 'wpsppro_enqueue');
 
 add_filter('wprtsp_cpt_defaults', 'wprtsppro_get_cpt_defaults');
 //add_filter('wprtsp_get_proofs', 'wprtsppro_get_cpt_defaults');
@@ -35,6 +36,15 @@ function wpsppro_enabled($enabled, $settings) {
     }
     
     return $enabled;
+}
+
+function wpsppro_enqueue(){
+    $screen = get_current_screen();
+    
+    if( $screen->post_type == 'socialproof' ) {
+        $wprtsp = WPRTSP::get_instance();
+        wp_enqueue_script( 'wprtsp-cpt-admin', $wprtsp->uri .'assets/wprtsp-cpt-admin.js', array('jquery'), null, true);
+    }
 }
 
 function wpsppro_get_proof_data_ctas( $ctas, $settings) {
