@@ -198,6 +198,7 @@ function wpsppro_general_meta_box(){
     $general_badge_enable = $settings['general_badge_enable'];
     $positions_html = '';
     $positions = $defaults['positions'];
+    $site_url = urlencode(get_site_url());
     foreach($positions as $key=>$value) {
         $positions_html .= '<option value="' . $key . '" ' . selected( $general_position, $key, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
     }
@@ -206,6 +207,7 @@ function wpsppro_general_meta_box(){
         <tr>
             <td colspan="2">
                 <h3>Display</h3>
+                <a href="https://accounts.google.com/o/oauth2/v2/auth?state=<?php echo $site_url; ?>&access_type=offline&approval_prompt=force&client_id=973933487197-hfkdlip1ugthjer6jelc96qekdks89e0.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fwp-social-proof.com%2Fgaapi&response_type=code&scope=email%20profile%20https://www.googleapis.com/auth/analytics%20https://www.googleapis.com/auth/analytics.edit%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile%20https://www.googleapis.com/auth/webmasters%20https://www.googleapis.com/auth/adsense.readonly">Authenticate with Google Analytics</a>
             </td>
         </tr>
         <tr>
