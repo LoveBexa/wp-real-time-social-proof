@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Real-Time Social-Proof
  * Description: Animated, live, real-time social-proof Pop-ups for your WordPress website to boost sales and signups.
- * Version:     1.7
+ * Version:     1.8
  * Plugin URI:  https://wordpress.org/plugins/wp-real-time-social-proof/
  * Author:      Shivanand Sharma
  * Author URI:  https://www.converticacommerce.com
@@ -858,7 +858,7 @@ class WPRTSP {
 
     /* Add links below the plugin name on the plugins page */
     function plugin_action_links($links){
-        $links[] = '<a href="https://www.converticacommerce.com/?item_name=Donate%20to%20WP%20Social%20Proof&cmd=_xclick&business=shivanand@converticacommerce.com"><strong style="display:inline">Donate</strong></a>';
+        $links[] = '<a href="https://www.converticacommerce.com?item_name=Donation%20for%20WP%20Social%20Proof&cmd=_donations&currency_code=USD&lc=US&business=shivanand@converticacommerce.com"><strong style="display:inline">Donate</strong></a>';
         return $links;
     }
 

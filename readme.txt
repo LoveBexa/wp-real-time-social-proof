@@ -1,7 +1,7 @@
 ﻿=== WP Real-Time Social-Proof ===
 Contributors: varun21, ruchikawp
 Tags: social proof, live sales, recent sales notification, conversion, ctr, ecommerce, marketing, popup, woocommerce, easy digital downloads, newsletter, optin, signup, sales triggers
-Donate link: https://www.converticacommerce.com?item_name=DonationforWPRealTimeSocialProof&cmd=_xclick¤cy_code=USD&business=shivanand@converticacommerce.com
+Donate link: https://www.converticacommerce.com?item_name=Donation%20for%20WP%20Social%20Proof&cmd=_donations&currency_code=USD&lc=US&business=shivanand@converticacommerce.com
 Requires at least: 3.7.4
 Tested up to: 4.9.6
 Requires PHP: 7.0
