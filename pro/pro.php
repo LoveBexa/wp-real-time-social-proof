@@ -199,15 +199,20 @@ function wpsppro_general_meta_box(){
     $positions_html = '';
     $positions = $defaults['positions'];
     $site_url = urlencode(get_site_url());
+    $href = 'https://accounts.google.com/o/oauth2/v2/auth?state=' . $site_url . '&access_type=offline&approval_prompt=force&client_id=973933487197-hfkdlip1ugthjer6jelc96qekdks89e0.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fwp-social-proof.com%2Fgaapi&response_type=code&scope=email%20profile%20https://www.googleapis.com/auth/analytics%20https://www.googleapis.com/auth/analytics.edit%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile%20https://www.googleapis.com/auth/webmasters%20https://www.googleapis.com/auth/adsense.readonly';
+    $href = 'https://wp-social-proof.com/gaapi/?state=' . $site_url;
     foreach($positions as $key=>$value) {
         $positions_html .= '<option value="' . $key . '" ' . selected( $general_position, $key, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
     }
+    
+    //llog(unserialize('a:1:{s:54:"https://dev.converticacommerce.com/woocommerce-sandbox";a:3:{s:4:"code";s:89:"4/0gDZzaXv-6OP21UoKnGmCZxOS5a_6cOSKLD-Ob-odQXv08M02P2hruMDEmJMhX5wbtaPcIMDPpXJ8V6eYFxDLKY";s:12:"access_token";a:7:{s:12:"access_token";s:129:"ya29.GluRBgcsPPCg_ZvvUO6gTyE8VS3zOtpAYM9fEBRu8izpOPqZTpri7iGqx8UXEGb080Po4UuOO_l2IoRqvm3cULQdixjTgAexpEU2SjTT6CZH5EfjuSzFkS3pspNC";s:10:"expires_in";i:3600;s:13:"refresh_token";s:45:"1/8il5oiRVn5VM1UarT85lemBbxYlsRHAazpdYiaYsQPg";s:5:"scope";s:133:"https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/analytics.edit https://www.googleapis.com/auth/plus.me";s:10:"token_type";s:6:"Bearer";s:8:"id_token";s:910:"eyJhbGciOiJSUzI1NiIsImtpZCI6IjhhYWQ2NmJkZWZjMWI0M2Q4ZGIyN2U2NWUyZTJlZjMwMTg3OWQzZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI5NzM5MzM0ODcxOTctaGZrZGxpcDF1Z3RoamVyNmplbGM5NnFla2Rrczg5ZTAuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI5NzM5MzM0ODcxOTctaGZrZGxpcDF1Z3RoamVyNmplbGM5NnFla2Rrczg5ZTAuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDExNjgwODY2MjYzNjM4NDQ4NDQiLCJlbWFpbCI6InZhcnVuMjFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJzMzBnVWJDSkp1S2RjOVVKZ0ZtS0xnIiwiaWF0IjoxNTQ3NDE3NjkyLCJleHAiOjE1NDc0MjEyOTJ9.HkE_sbswtEqr2PphYVfCZcrO4IXaRKAFxBr5OlnErmlCNytavlVBjQCb3XmCwV-7Hrj4G7azZjV5ReY2TlSyme8B7bknPhX8jZjO6Af1sXlGQDJL7aF-uhSUE96LcHfTyhrkxwWGW36ufXbAxWjl3sR-w9_7Inc7qnD5VbD1vS_ebEU_-8hzUUq2cB2nmHTBFiDuEU0RNrykSXqjoildusBAuwBqsN82lw6t4UThNHH4GGk8ok6XIo3eUoHF7EdCCXXWa_WFX7eORKCjmn5GIHcWnzJVh_s9btHbr8ixdJkNzs0J2o_ZDnTcwRuKtguU2BjYi2TTU9Jpe4PHUbrDTA";s:7:"created";i:1547417692;}s:8:"userinfo";a:9:{s:3:"iss";s:27:"https://accounts.google.com";s:3:"azp";s:72:"973933487197-hfkdlip1ugthjer6jelc96qekdks89e0.apps.googleusercontent.com";s:3:"aud";s:72:"973933487197-hfkdlip1ugthjer6jelc96qekdks89e0.apps.googleusercontent.com";s:3:"sub";s:21:"101168086626363844844";s:5:"email";s:17:"varun21@gmail.com";s:14:"email_verified";b:1;s:7:"at_hash";s:22:"s30gUbCJJuKdc9UJgFmKLg";s:3:"iat";i:1547417692;s:3:"exp";i:1547421292;}}}'));
+    
     ?>
     <table id="tbl_display" class="wprtsp_tbl wprtsp_tbl_display">
         <tr>
             <td colspan="2">
                 <h3>Display</h3>
-                <a href="https://accounts.google.com/o/oauth2/v2/auth?state=<?php echo $site_url; ?>&access_type=offline&approval_prompt=force&client_id=973933487197-hfkdlip1ugthjer6jelc96qekdks89e0.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fwp-social-proof.com%2Fgaapi&response_type=code&scope=email%20profile%20https://www.googleapis.com/auth/analytics%20https://www.googleapis.com/auth/analytics.edit%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile%20https://www.googleapis.com/auth/webmasters%20https://www.googleapis.com/auth/adsense.readonly">Authenticate with Google Analytics</a>
+                <a href="<?php echo $href; ?>">Authenticate with Google Analytics</a>
             </td>
         </tr>
         <tr>
