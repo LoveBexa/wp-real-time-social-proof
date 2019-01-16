@@ -5,7 +5,7 @@ Donate link: https://www.converticacommerce.com?item_name=Donation%20for%20WP%20
 Requires at least: 3.7.4
 Tested up to: 4.9.6
 Requires PHP: 7.0
-Stable tag: 1.6
+Stable tag: 1.8
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
