@@ -33,45 +33,65 @@
 #social-proof-pro-live .handlediv .toggle-indicator:before,
 #social-proof-pro-hot-stats .handlediv .toggle-indicator:before,
 #social-proof-pro-custom-message .handlediv .toggle-indicator:before {
-    color: #fff;
+    /*color: #fff;*/
     margin-top: 12px;
 }
 
 #social-proof-pro-general .hndle {
+    /*
     background: hsl(214, 25%, 33%);
     background: hsl(195, 5%, 50%);
-    color: #fff;
+    */
+    border-left: 10px solid hsl(195, 5%, 50%);
+    border-left: 10px solid hsl(195, 5%, 80%);
+    /*     color: #fff;
+ */
 }
 
 #social-proof-pro-conversions .hndle {
+    /*
     background: #ffbf00;
     background: #f4d86d;
     background: #0095ff;
-    color: #fff;
+    */
+    border-left: 10px solid #0095ff;
+    /*     color: #fff;
+ */
 }
 
 #social-proof-pro-live .hndle {
+    /*
     background: #ffbf00;
     background: #f4d86d;
     background: hsl(48, 100%, 48%);
-    color: #fff;
+    */
+    border-left: 10px solid hsl(48, 100%, 48%);
+    /*     color: #fff;
+ */
 }
 
 #social-proof-pro-hot-stats .hndle {
+    /*
     background: hsl(350,60%,50%);
-    color: #fff;
+    */
+    border-left: 10px solid hsl(350, 60%, 50%);
+    /*     color: #fff;
+ */
 }
 
 #social-proof-pro-custom-message .hndle {
+    /*
     background: #60bf7f;
-    color: #fff;
+    */
+    border-left: 10px solid #60bf7f;
+    /* color: #fff; */
 }
 
 #conversions_audition_sound:before,
 #livestats_audition_sound:before,
 #hotstats_audition_sound:before,
-#ctas_audition_sound:before{
-    display:inline-block;
+#ctas_audition_sound:before {
+    display: inline-block;
     background: #0095ff;
     color: white;
     border-radius: 100px;
@@ -83,12 +103,15 @@
 #livestats_audition_sound:before {
     background: hsl(48, 100%, 48%);
 }
+
 #hotstats_audition_sound:before {
-    background: hsl(350,60%,50%);
+    background: hsl(350, 60%, 50%);
 }
+
 #ctas_audition_sound:before {
     background: #60bf7f;
 }
+
 #ctas-fieldset-one th {
     text-align: left;
 }

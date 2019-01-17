@@ -293,7 +293,7 @@ function wpsppro_general_meta_box(){
         </tr>
          <tr id="post_ids_selector">
             <td><label for="wprtsp_general_post_ids">Enter Post Ids (comma separated)</label></td>
-            <td><input type="text" class="widefat" <?php if($show_on == 1) {echo 'readonly="true"';} ?> id="wprtsp_general_post_ids" name="wprtsp[general_post_ids]" value="<?php echo $post_ids; ?>"></td>
+            <td><input type="text" class="widefat" <?php if($show_on == 1) {echo 'readonly';} ?> id="wprtsp_general_post_ids" name="wprtsp[general_post_ids]" value="<?php echo $post_ids; ?>"></td>
         </tr>
         <tr>
             <td><label for="wprtsp[general_position]">Position</label></td>
@@ -447,11 +447,11 @@ function wpsppro_conversions_meta_box(){
         </tr>
         <tr class="generated_transactions">
             <td><label for="wprtsp_conversion_generated_action">Action for Generated records</label></td>
-            <td><input id="wprtsp_conversion_generated_action" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversion_generated_action]" type="text" class="widefat" value="<?php echo $conversion_generated_action ?>" /></td>
+            <td><input id="wprtsp_conversion_generated_action" <?php if($conversions_shop_type != 'Generated') {echo 'readonly';} ?> name="wprtsp[conversion_generated_action]" type="text" class="widefat" value="<?php echo $conversion_generated_action ?>" /></td>
         </tr>
         <tr class="generated_transactions">
             <td><label for="wprtsp_conversion_generated_product">Product for Generated records</label></td>
-            <td><input id="wprtsp_conversion_generated_product" <?php if($conversions_shop_type != 'Generated') {echo 'readonly="true"';} ?> name="wprtsp[conversion_generated_product]" type="text" class="widefat" value="<?php echo $conversion_generated_product ?>" /></td>
+            <td><input id="wprtsp_conversion_generated_product" <?php if($conversions_shop_type != 'Generated') {echo 'readonly';} ?> name="wprtsp[conversion_generated_product]" type="text" class="widefat" value="<?php echo $conversion_generated_product ?>" /></td>
         </tr>
     </table>
     <script type="text/javascript">
