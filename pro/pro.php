@@ -11,20 +11,19 @@ add_action( 'wprtsp_enabled', 'wpsppro_enabled', 10, 2 );
 add_filter( 'wprtsp_sanitize', 'wpsppro_sanitize', 10, 2 );
 add_filter( 'wprtsp_get_proof_data_ctas', 'wpsppro_get_proof_data_ctas', 10, 2 );
 add_action( 'admin_enqueue_scripts', 'wpsppro_enqueue');
-add_action( 'wp_ajax_wprtsppro_save_gaprofile', 'wprtsppro_save_gaprofile' );
+//add_action( 'wp_ajax_wprtsppro_save_gaprofile', 'wprtsppro_save_gaprofile' );
+add_action( 'admin_init', 'wprtsppro_save_gaprofile' );
 add_filter( 'wprtsp_cpt_defaults', 'wprtsppro_get_cpt_defaults');
 //add_filter('wprtsp_get_proofs', 'wprtsppro_get_cpt_defaults');
 
 add_filter( 'wprtsp_conversions_sound_notification_markup', 'wprtspro_conversions_sound_notification_markup', 10 , 2);
-
 add_filter( 'wprtsp_sound_notification_file', 'wprtspro_sound_notification_file', 10 , 2);
-
 add_filter( 'wprtsp_get_proof_data_hotstats_WooCommerce', 'wprtspro_hotstats_wooc', 10, 2);
 
-
-function wprtsppro_save_gaprofile(){
+function wprtsppro_save_gaprofile(){ return;
     check_ajax_referer( 'wprtsp_gaapi', $_REQUEST['origin_nonce'] );
     if(current_user_can('activate_plugins')) {
+        
         update_option('wpsppro_ga_view',$_REQUEST['ga_view']);
         wp_send_json(get_option('wpsppro_ga_view'));
     }
