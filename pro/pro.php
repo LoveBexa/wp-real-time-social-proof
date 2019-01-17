@@ -121,7 +121,6 @@ function wprtsppro_get_cpt_defaults($settings = array()){
 
         'conversions_enable' => true, // bool
         'conversions_enable_mob' => true, // bool
-        
         'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ), // string
         //'conversions_transaction' => 'subscribed to the newsletter', // string
         //'conversions_transaction_alt' => 'registered for the webinar', // string
@@ -131,26 +130,34 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         'conversion_generated_product' => 'newsletter',
         'conversions_sound_notification' => false, // bool
         'conversions_sound_notification_file' => 'salient.mp3', // string
-        
         'conversions_title_notification' => false, // bool
-        
-        
-        'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right', 'c' => 'Center'),
-        
-        /* Additional routines */
-        //'conversions_records' => $wprtsp->generate_cpt_records(array('conversions_transaction' => 'subscribed to the newsletter', 'conversions_transaction_alt' => 'registered for the webinar')),
         
         'livestats_enable' => true, // bool
         'livestats_enable_mob' => true, // bool
-        
+        'livestats_sound_notification' => false, // bool
+        'livestats_sound_notification_file' => 'salient.mp3', // string
+        'livestats_title_notification' => false, // bool
+
         'hotstats_enable' => true,
         'hotstats_enable_mob' => true,
+        'hotstats_sound_notification' => false, // bool
+        'hotstats_sound_notification_file' => 'salient.mp3', // string
+        'hotstats_title_notification' => false, // bool
         'hotstats_timeframe' => 1,
         'hotstats_timeframes' => array(1, 2, 3, 7, 30, -1),
 
         'ctas_enable' => true,
         'ctas_enable_mob' => true,
-        'ctas' => array( array('title' => 'Offer just for you', 'message' => 'Get 15% discount with coupon INSERTCOUPONHERE'))
+        'ctas_sound_notification' => true, // bool
+        'ctas_sound_notification_file' => 'demonstrative.mp3', // string
+        'ctas_title_notification' => true, // bool
+        'ctas' => array( array('title' => 'Offer just for you', 'message' => 'Get 15% discount with coupon INSERTCOUPONHERE')),
+
+        'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right', 'c' => 'Center'),
+        
+        /* Additional routines */
+        //'conversions_records' => $wprtsp->generate_cpt_records(array('conversions_transaction' => 'subscribed to the newsletter', 'conversions_transaction_alt' => 'registered for the webinar')),
+        
     );
 
     return $defaults;
@@ -187,14 +194,23 @@ function wpsppro_sanitize( $request ) {
 
     $request['livestats_enable'] = array_key_exists('livestats_enable', $request) && $request['livestats_enable'] ? true : false;
     $request['livestats_enable_mob'] = array_key_exists('livestats_enable_mob', $request) && $request['livestats_enable_mob'] ? true : false;
-    
+    $request['livestats_title_notification'] = array_key_exists('livestats_title_notification', $request) && $request['livestats_title_notification'] ? true : false;
+    $request['livestats_sound_notification'] = array_key_exists('livestats_sound_notification', $request) && $request['livestats_sound_notification'] ? true : false;
+    $request['livestats_sound_notification_file'] = array_key_exists('livestats_sound_notification_file', $request) ? sanitize_text_field($request['livestats_sound_notification_file'] ) : $defaults['livestats_sound_notification_file'];
+
     $request['hotstats_enable'] = array_key_exists('hotstats_enable', $request) && $request['hotstats_enable'] ? true : false;
     $request['hotstats_enable_mob'] = array_key_exists('hotstats_enable_mob', $request) && $request['hotstats_enable_mob'] ? true : false;
+    $request['hotstats_title_notification'] = array_key_exists('hotstats_title_notification', $request) && $request['hotstats_title_notification'] ? true : false;
+    $request['hotstats_sound_notification'] = array_key_exists('hotstats_sound_notification', $request) && $request['hotstats_sound_notification'] ? true : false;
+    $request['hotstats_sound_notification_file'] = array_key_exists('hotstats_sound_notification_file', $request) ? sanitize_text_field($request['hotstats_sound_notification_file'] ) : $defaults['hotstats_sound_notification_file'];
     $request['hotstats_timeframe'] = array_key_exists('hotstats_timeframe', $request) ? sanitize_text_field($request['hotstats_timeframe']) : $defaults['hotstats_timeframe'];
     
     $request['ctas_enable'] = array_key_exists('ctas_enable', $request) && $request['ctas_enable'] ? true : false;
     $request['ctas_enable_mob'] = array_key_exists('ctas_enable_mob', $request) && $request['ctas_enable_mob'] ? true : false;
-    
+    $request['ctas_title_notification'] = array_key_exists('ctas_title_notification', $request) && $request['ctas_title_notification'] ? true : false;
+    $request['ctas_sound_notification'] = array_key_exists('ctas_sound_notification', $request) && $request['ctas_sound_notification'] ? true : false;
+    $request['ctas_sound_notification_file'] = array_key_exists('ctas_sound_notification_file', $request) ? sanitize_text_field($request['ctas_sound_notification_file'] ) : $defaults['ctas_sound_notification_file'];
+
     if(array_key_exists('ctas', $request)) {
         $ctas = $request['ctas'];
         foreach($ctas as $cta => $value) {
@@ -501,6 +517,16 @@ function wpsppro_live_meta_box(){
     $settings = wpsppro_sanitize($settings);
     $livestats_enable = $settings['livestats_enable'];
     $livestats_enable_mob = $settings['livestats_enable_mob'];
+    $livestats_title_notification = $settings['livestats_title_notification'];
+    $livestats_sound_notification = $settings['livestats_sound_notification'];
+    $livestats_sound_notification_file = $settings['livestats_sound_notification_file'];
+    $available_audio = '<select id="wprtsp_livestats_sound_notification_file" name="wprtsp[livestats_sound_notification_file]">';
+    $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
+    foreach ($files as $file ) {
+        
+        $available_audio .= '<option '. disabled( $livestats_sound_notification, false, false) .' value="'.$file.'" '. selected( $livestats_sound_notification_file, $file, false ) .'>'.ucwords(str_replace('-', ' ',explode('.', $file)[0])).'</option>';
+    }
+    $available_audio .= '</select>';
     ?>
     <table id="tbl_livestats" class="wprtsp_tbl wprtsp_tbl_livestats">
         <thead>
@@ -525,13 +551,59 @@ function wpsppro_live_meta_box(){
                     <input id="wprtsp_livestats_enable_mob" name="wprtsp[livestats_enable_mob]" type="checkbox" value="1" <?php checked( $livestats_enable_mob, '1' , true); ?>/>
                 </td>
             </tr>
+            <tr>
+                <td><label for="wprtsp_livestats_title_notification">Enable Title Notification</label></td>
+                <td><input id="wprtsp_livestats_title_notification" name="wprtsp[livestats_title_notification]" type="checkbox"
+                        value="1" <?php checked( 1, $livestats_title_notification, true); ?>/></td>
+            </tr>
+            <tr>
+                <td><label for="wprtsp_livestats_sound_notification">Enable Sound Notification</label></td>
+                <td><input id="wprtsp_livestats_sound_notification" name="wprtsp[livestats_sound_notification]" type="checkbox"
+                        value="1" <?php checked( 1, $livestats_sound_notification, true); ?>/></td>
+            </tr>
+            <tr>
+                <td><label for="wprtsp_livestats_sound_notification_file">Choose Audio</label></td>
+                <td>
+                    <?php echo $available_audio; ?><span id="livestats_audition_sound" class="dashicons-arrow-right dashicons"></span></td>
+            </tr>
         </thead>
     </table>
+    <script type="text/javascript">
+    $('#wprtsp_livestats_sound_notification').change(function() {
+            if($('#wprtsp_livestats_sound_notification').prop('checked')) {
+                $('#wprtsp_livestats_sound_notification_file option').each(function(){
+                    if($(this).attr('disabled')) {
+                        $(this).removeAttr('disabled');
+                    }
+                });
+            }
+            else {
+                $('#wprtsp_livestats_sound_notification_file option').each(function(){
+                    if(! $(this).attr('selected')) {
+                        $(this).attr('disabled','true');
+                    }
+                });
+            }
+        });
+        $('#livestats_audition_sound').click(function(){
+            wprtsp_livestats_sound_preview = jQuery('#wprtsp_livestats_sound_preview').length ? jQuery('#wprtsp_livestats_sound_preview') : jQuery('<audio/>', {
+                id: 'wprtsp_livestats_sound_preview'
+            }).appendTo('body');
+            if( ! $('#wprtsp_livestats_sound_notification').prop('checked')) {
+                alert('Cannot play sound if Sound Notification is unchecked.');
+                return;
+            }
+            
+            jQuery('#wprtsp_livestats_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_livestats_sound_notification_file').val());
+            document.getElementById("wprtsp_livestats_sound_preview").play(); 
+        });
+        </script>
     <?php
 }
 
 function wpsppro_hot_stats_meta_box(){
     global $post;
+    $wprtsp = WPRTSP::get_instance();
     $defaults = wprtsppro_get_cpt_defaults();
     $settings = get_post_meta( $post->ID, '_socialproof', true );
     if(! $settings) {
@@ -542,6 +614,10 @@ function wpsppro_hot_stats_meta_box(){
     $hotstats_enable_mob = $settings['hotstats_enable_mob'];
     $hotstats_timeframe = $settings['hotstats_timeframe'];
     
+    $hotstats_title_notification = $settings['hotstats_title_notification'];
+    $hotstats_sound_notification = $settings['hotstats_sound_notification'];
+    $hotstats_sound_notification_file = $settings['hotstats_sound_notification_file'];
+
     $timeframes = $defaults['hotstats_timeframes'];
     $positions_html = '';
     
@@ -555,6 +631,13 @@ function wpsppro_hot_stats_meta_box(){
     }
 
     $positions_html = '<select id="wprtsp_hotstats_timeframe" name="wprtsp[hotstats_timeframe]">'.$positions_html.'</select>';
+    $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
+    $available_audio = '<select id="wprtsp_hotstats_sound_notification_file" name="wprtsp[hotstats_sound_notification_file]">';
+    foreach ($files as $file ) {
+        
+        $available_audio .= '<option '. disabled( $hotstats_sound_notification, false, false) .' value="'.$file.'" '. selected( $hotstats_sound_notification_file, $file, false ) .'>'.ucwords(str_replace('-', ' ',explode('.', $file)[0])).'</option>';
+    }
+    $available_audio .= '</select>';
     ?>
     <table id="tbl_hotstats" class="wprtsp_tbl wprtsp_tbl_hotstats">
         <thead>
@@ -574,11 +657,56 @@ function wpsppro_hot_stats_meta_box(){
             <td><input id="wprtsp_hotstats_enable_mob" name="wprtsp[hotstats_enable_mob]" type="checkbox" value="1" <?php checked( $hotstats_enable_mob, '1' , true); ?>/></td>
         </tr>
         <tr>
+            <td><label for="wprtsp_hotstats_title_notification">Enable Title Notification</label></td>
+            <td><input id="wprtsp_hotstats_title_notification" name="wprtsp[hotstats_title_notification]" type="checkbox"
+                    value="1" <?php checked( 1, $hotstats_title_notification, true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_hotstats_sound_notification">Enable Sound Notification</label></td>
+            <td><input id="wprtsp_hotstats_sound_notification" name="wprtsp[hotstats_sound_notification]" type="checkbox"
+                    value="1" <?php checked( 1, $hotstats_sound_notification, true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_hotstats_sound_notification_file">Choose Audio</label></td>
+            <td>
+                <?php echo $available_audio; ?><span id="hotstats_audition_sound" class="dashicons-arrow-right dashicons"></span></td>
+        </tr>
+        <tr>
             <td>Show number of sales since</td>
             <td><?php echo $positions_html; ?></td>
         </tr>
         
     </table>
+    <script type="text/javascript">
+    $('#wprtsp_hotstats_sound_notification').change(function() {
+            if($('#wprtsp_hotstats_sound_notification').prop('checked')) {
+                $('#wprtsp_hotstats_sound_notification_file option').each(function(){
+                    if($(this).attr('disabled')) {
+                        $(this).removeAttr('disabled');
+                    }
+                });
+            }
+            else {
+                $('#wprtsp_hotstats_sound_notification_file option').each(function(){
+                    if(! $(this).attr('selected')) {
+                        $(this).attr('disabled','true');
+                    }
+                });
+            }
+        });
+        $('#hotstats_audition_sound').click(function(){
+            wprtsp_hotstats_sound_preview = jQuery('#wprtsp_hotstats_sound_preview').length ? jQuery('#wprtsp_hotstats_sound_preview') : jQuery('<audio/>', {
+                id: 'wprtsp_hotstats_sound_preview'
+            }).appendTo('body');
+            if( ! $('#wprtsp_hotstats_sound_notification').prop('checked')) {
+                alert('Cannot play sound if Sound Notification is unchecked.');
+                return;
+            }
+            
+            jQuery('#wprtsp_hotstats_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_hotstats_sound_notification_file').val());
+            document.getElementById("wprtsp_hotstats_sound_preview").play(); 
+        });
+        </script>
     <?php
 }
 
@@ -595,6 +723,16 @@ function wpsppro_ctas_meta_box() {
     $ctas = $settings['ctas'];
     $ctas_enable =  $settings['ctas_enable'];
     $ctas_enable_mob =  $settings['ctas_enable_mob'];
+    $ctas_title_notification = $settings['ctas_title_notification'];
+    $ctas_sound_notification = $settings['ctas_sound_notification'];
+    $ctas_sound_notification_file = $settings['ctas_sound_notification_file'];
+    $available_audio = '<select id="wprtsp_ctas_sound_notification_file" name="wprtsp[ctas_sound_notification_file]">';
+    $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
+    foreach ($files as $file ) {
+        
+        $available_audio .= '<option '. disabled( $ctas_sound_notification, false, false) .' value="'.$file.'" '. selected( $ctas_sound_notification_file, $file, false ) .'>'.ucwords(str_replace('-', ' ',explode('.', $file)[0])).'</option>';
+    }
+    $available_audio .= '</select>';
     ?>
     <table id="tbl_ctas" class="wprtsp_tbl wprtsp_tbl_ctas">
     <thead>
@@ -606,12 +744,27 @@ function wpsppro_ctas_meta_box() {
             </tr>
         </thead>
         <tr>
-            <td><label for="wprtsp_ctas_enable">Enable Hot Stats on Desktop</label></td>
+            <td><label for="wprtsp_ctas_enable">Enable CTAs on Desktop</label></td>
             <td><input id="wprtsp_ctas_enable" name="wprtsp[ctas_enable]" type="checkbox" value="1" <?php checked( $ctas_enable, '1' , true); ?>/></td>
         </tr>
         <tr>
-            <td><label for="wprtsp_ctas_enable_mob">Enable Hot Stats on Mobile</label></td>
+            <td><label for="wprtsp_ctas_enable_mob">Enable CTAs on Mobile</label></td>
             <td><input id="wprtsp_ctas_enable_mob" name="wprtsp[ctas_enable_mob]" type="checkbox" value="1" <?php checked( $ctas_enable_mob, '1' , true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_ctas_title_notification">Enable Title Notification</label></td>
+            <td><input id="wprtsp_ctas_title_notification" name="wprtsp[ctas_title_notification]" type="checkbox"
+                    value="1" <?php checked( 1, $ctas_title_notification, true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_ctas_sound_notification">Enable Sound Notification</label></td>
+            <td><input id="wprtsp_ctas_sound_notification" name="wprtsp[ctas_sound_notification]" type="checkbox"
+                    value="1" <?php checked( 1, $ctas_sound_notification, true); ?>/></td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_ctas_sound_notification_file">Choose Audio</label></td>
+            <td>
+                <?php echo $available_audio; ?><span id="ctas_audition_sound" class="dashicons-arrow-right dashicons"></span></td>
         </tr>
     </table>
     <table id="ctas-fieldset-one" width="100%">
@@ -662,6 +815,34 @@ function wpsppro_ctas_meta_box() {
         $( '.remove-row' ).on('click', function() {
             $(this).parents('tr').remove();
             return false;
+        });
+        $('#wprtsp_ctas_sound_notification').change(function() {
+            if($('#wprtsp_ctas_sound_notification').prop('checked')) {
+                $('#wprtsp_ctas_sound_notification_file option').each(function(){
+                    if($(this).attr('disabled')) {
+                        $(this).removeAttr('disabled');
+                    }
+                });
+            }
+            else {
+                $('#wprtsp_ctas_sound_notification_file option').each(function(){
+                    if(! $(this).attr('selected')) {
+                        $(this).attr('disabled','true');
+                    }
+                });
+            }
+        });
+        $('#ctas_audition_sound').click(function(){
+            wprtsp_ctas_sound_preview = jQuery('#wprtsp_ctas_sound_preview').length ? jQuery('#wprtsp_ctas_sound_preview') : jQuery('<audio/>', {
+                id: 'wprtsp_ctas_sound_preview'
+            }).appendTo('body');
+            if( ! $('#wprtsp_ctas_sound_notification').prop('checked')) {
+                alert('Cannot play sound if Sound Notification is unchecked.');
+                return;
+            }
+            
+            jQuery('#wprtsp_ctas_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_ctas_sound_notification_file').val());
+            document.getElementById("wprtsp_ctas_sound_preview").play(); 
         });
     </script>
     <?php

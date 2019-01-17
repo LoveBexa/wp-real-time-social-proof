@@ -67,7 +67,10 @@
     color: #fff;
 }
 
-#conversions_audition_sound:before{
+#conversions_audition_sound:before,
+#livestats_audition_sound:before,
+#hotstats_audition_sound:before,
+#ctas_audition_sound:before{
     display:inline-block;
     background: #0095ff;
     color: white;
@@ -77,6 +80,15 @@
     cursor: pointer
 }
 
+#livestats_audition_sound:before {
+    background: hsl(48, 100%, 48%);
+}
+#hotstats_audition_sound:before {
+    background: hsl(350,60%,50%);
+}
+#ctas_audition_sound:before {
+    background: #60bf7f;
+}
 #ctas-fieldset-one th {
     text-align: left;
 }
