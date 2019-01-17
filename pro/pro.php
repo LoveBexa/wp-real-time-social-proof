@@ -122,8 +122,6 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         'conversions_enable' => true, // bool
         'conversions_enable_mob' => true, // bool
         'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ), // string
-        //'conversions_transaction' => 'subscribed to the newsletter', // string
-        //'conversions_transaction_alt' => 'registered for the webinar', // string
         'conversion_template_line1' => '{name} {location}',
         'conversion_template_line2' => '{action} {product} {time}',
         'conversion_generated_action' => 'subscribed to the',
@@ -157,7 +155,6 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         
         /* Additional routines */
         //'conversions_records' => $wprtsp->generate_cpt_records(array('conversions_transaction' => 'subscribed to the newsletter', 'conversions_transaction_alt' => 'registered for the webinar')),
-        
     );
 
     return $defaults;
@@ -531,9 +528,7 @@ function wpsppro_live_meta_box(){
     <table id="tbl_livestats" class="wprtsp_tbl wprtsp_tbl_livestats">
         <thead>
             <tr>
-                <th colspan="2">
-                    <h3>Show number of live visitors</h3>
-                </th>
+                <td colspan="2"><h3>Show number of live visitors</h3></td>
             </tr>
             <tr>
                 <td>
@@ -642,9 +637,9 @@ function wpsppro_hot_stats_meta_box(){
     <table id="tbl_hotstats" class="wprtsp_tbl wprtsp_tbl_hotstats">
         <thead>
             <tr>
-                <th colspan="2">
+                <td colspan="2">
                     <h3>Show Conversion Milestones over a period of time.</h3>
-                </th>
+                </td>
 
             </tr>
         </thead>
@@ -737,9 +732,9 @@ function wpsppro_ctas_meta_box() {
     <table id="tbl_ctas" class="wprtsp_tbl wprtsp_tbl_ctas">
     <thead>
             <tr>
-                <th colspan="2">
+                <td colspan="2">
                     <h3>Add custom calls to action such as offers, discount coupons etc.</h3>
-                </th>
+                </td>
 
             </tr>
         </thead>
