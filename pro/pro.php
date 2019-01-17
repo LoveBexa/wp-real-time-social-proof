@@ -20,12 +20,39 @@ add_filter( 'wprtsp_conversions_sound_notification_markup', 'wprtspro_conversion
 add_filter( 'wprtsp_sound_notification_file', 'wprtspro_sound_notification_file', 10 , 2);
 add_filter( 'wprtsp_get_proof_data_hotstats_WooCommerce', 'wprtspro_hotstats_wooc', 10, 2);
 
-function wprtsppro_save_gaprofile(){ return;
-    check_ajax_referer( 'wprtsp_gaapi', $_REQUEST['origin_nonce'] );
-    if(current_user_can('activate_plugins')) {
-        
-        update_option('wpsppro_ga_view',$_REQUEST['ga_view']);
-        wp_send_json(get_option('wpsppro_ga_view'));
+function wprtsppro_save_gaprofile(){
+    //https://dev.converticacommerce.com/woocommerce-sandbox/wp-admin/post.php?post=204&action=edit&origin_nonce=4c990a9bb6&gaapi_accountid=107074057&gaapi_webpropertyid=159840733&gaapi_webpropertyua=UA-107074057-1&gaapi_profileid=161102233&wpsppro-action=oauth&success=1
+    //llog('hello');
+    
+    
+    if ( isset( $_REQUEST['wpsppro-action'] ) && $_REQUEST['wpsppro-action'] == 'oauth' ) {
+        wp_verify_nonce( $_REQUEST['origin_nonce'], 'wprtsp_gaapi' );
+        if( current_user_can('activate_plugins') 
+        && isset($_REQUEST['success']) && $_REQUEST['success']
+        && isset($_REQUEST['gaapi_accountid']) && $_REQUEST['gaapi_accountid']
+        && isset($_REQUEST['gaapi_webpropertyid']) && $_REQUEST['gaapi_webpropertyid']
+        && isset($_REQUEST['gaapi_webpropertyua']) && $_REQUEST['gaapi_webpropertyua']
+        && isset($_REQUEST['gaapi_profileid']) && $_REQUEST['gaapi_profileid']
+        ){
+            //
+            //wp_send_json(get_option('wpsppro_ga_profile'));
+            $settings = array();
+            $settings['ga_accountid'] = $_REQUEST['gaapi_accountid'];
+            $settings['ga_webpropertyid'] = $_REQUEST['gaapi_webpropertyid'];
+            $settings['ga_webpropertyua'] = $_REQUEST['gaapi_webpropertyua'];
+            $settings['ga_profileid'] = $_REQUEST['gaapi_profileid'];
+            update_option('wpsppro_ga_profile',$settings);
+        }
+        else {
+            
+        }
+        //llog(get_edit_post_link($_REQUEST['post']) );
+        wp_redirect( html_entity_decode( get_edit_post_link($_REQUEST['post']) ), 302 );
+        //die();
+    }
+    
+    if ( isset( $_REQUEST['wpsppro-action'] ) && $_REQUEST['wpsppro-action'] == 'revoke' && isset( $_REQUEST['success'] ) && $_REQUEST['success'] == '1' ) {
+        delete_option('wpsppro_ga_profile');
     }
 }
 
@@ -214,27 +241,34 @@ function wpsppro_general_meta_box(){
         'origin_notification_id' => $post->ID,
         'origin_ajaxurl' => admin_url( 'admin-ajax.php' )
     );
-    $statevars = json_encode( $statevars );
-    $statevars = strtr(base64_encode($statevars), '+/=', '-_,');
 
-    $href = WPSPPROAPIURL . '?state=';
-    $href = 'https://wp-social-proof.com/gaapi/?wppro_gaapi_authenticate=' . $statevars;
+    $statevars = json_encode( $statevars );
+    $statevars = strtr( base64_encode( $statevars ), '+/=', '-_,' );
+
+    //$href = WPSPPROAPIURL . '?state=';
+    //$href = WPSPPROAPIURL .'/?wppro_gaapi_authenticate=' . $statevars;
 
     foreach( $positions as $key=>$value ) {
         $positions_html .= '<option value="' . $key . '" ' . selected( $general_position, $key, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';
     }
     //llog(unserialize('a:1:{s:54:"https://dev.converticacommerce.com/woocommerce-sandbox";a:3:{s:4:"code";s:89:"4/0gDZzaXv-6OP21UoKnGmCZxOS5a_6cOSKLD-Ob-odQXv08M02P2hruMDEmJMhX5wbtaPcIMDPpXJ8V6eYFxDLKY";s:12:"access_token";a:7:{s:12:"access_token";s:129:"ya29.GluRBgcsPPCg_ZvvUO6gTyE8VS3zOtpAYM9fEBRu8izpOPqZTpri7iGqx8UXEGb080Po4UuOO_l2IoRqvm3cULQdixjTgAexpEU2SjTT6CZH5EfjuSzFkS3pspNC";s:10:"expires_in";i:3600;s:13:"refresh_token";s:45:"1/8il5oiRVn5VM1UarT85lemBbxYlsRHAazpdYiaYsQPg";s:5:"scope";s:133:"https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/analytics.edit https://www.googleapis.com/auth/plus.me";s:10:"token_type";s:6:"Bearer";s:8:"id_token";s:910:"eyJhbGciOiJSUzI1NiIsImtpZCI6IjhhYWQ2NmJkZWZjMWI0M2Q4ZGIyN2U2NWUyZTJlZjMwMTg3OWQzZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI5NzM5MzM0ODcxOTctaGZrZGxpcDF1Z3RoamVyNmplbGM5NnFla2Rrczg5ZTAuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI5NzM5MzM0ODcxOTctaGZrZGxpcDF1Z3RoamVyNmplbGM5NnFla2Rrczg5ZTAuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDExNjgwODY2MjYzNjM4NDQ4NDQiLCJlbWFpbCI6InZhcnVuMjFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJzMzBnVWJDSkp1S2RjOVVKZ0ZtS0xnIiwiaWF0IjoxNTQ3NDE3NjkyLCJleHAiOjE1NDc0MjEyOTJ9.HkE_sbswtEqr2PphYVfCZcrO4IXaRKAFxBr5OlnErmlCNytavlVBjQCb3XmCwV-7Hrj4G7azZjV5ReY2TlSyme8B7bknPhX8jZjO6Af1sXlGQDJL7aF-uhSUE96LcHfTyhrkxwWGW36ufXbAxWjl3sR-w9_7Inc7qnD5VbD1vS_ebEU_-8hzUUq2cB2nmHTBFiDuEU0RNrykSXqjoildusBAuwBqsN82lw6t4UThNHH4GGk8ok6XIo3eUoHF7EdCCXXWa_WFX7eORKCjmn5GIHcWnzJVh_s9btHbr8ixdJkNzs0J2o_ZDnTcwRuKtguU2BjYi2TTU9Jpe4PHUbrDTA";s:7:"created";i:1547417692;}s:8:"userinfo";a:9:{s:3:"iss";s:27:"https://accounts.google.com";s:3:"azp";s:72:"973933487197-hfkdlip1ugthjer6jelc96qekdks89e0.apps.googleusercontent.com";s:3:"aud";s:72:"973933487197-hfkdlip1ugthjer6jelc96qekdks89e0.apps.googleusercontent.com";s:3:"sub";s:21:"101168086626363844844";s:5:"email";s:17:"varun21@gmail.com";s:14:"email_verified";b:1;s:7:"at_hash";s:22:"s30gUbCJJuKdc9UJgFmKLg";s:3:"iat";i:1547417692;s:3:"exp";i:1547421292;}}}'));
-    llog( get_option('wpsppro_ga_view') );
-    llog( $statevars );
-    llog(json_decode(base64_decode(strtr($statevars, '-_,', '+/=')), true));
+    $ga_profile = get_option( 'wpsppro_ga_profile' );
+    if( $ga_profile ) {
+        $ga_profile = $ga_profile['ga_webpropertyua'];
+    }
+    //llog( $statevars );
+    //llog( json_decode( base64_decode( strtr( $statevars, '-_,', '+/=' ) ), true ) );
     //llog(WPSPPROAPIURL);
     ?>
     <table id="tbl_display" class="wprtsp_tbl wprtsp_tbl_display">
         <tr>
             <td colspan="2">
                 <h3>Display</h3>
-                <a href="<?php echo $href; ?>">Authenticate with Google Analytics</a>
             </td>
+        </tr>
+        <tr>
+            <td><label for="wprtsp_general_show_on">Google Analytics</label></td>
+            <td><?php if( ! $ga_profile) { ?> <a class="button-primary" href="<?php echo WPSPPROAPIURL .'/?wppro_gaapi_authenticate=' . $statevars; ?>">Authenticate with Google Analytics</a> <?php } else { ?>Profile Active: <?php echo $ga_profile; ?><br /><a href="<?php echo WPSPPROAPIURL .'/?wppro_gaapi_revoke=' . $statevars; ?>" class="button-primary">Disconnect</a><?php } ?>
         </tr>
         <tr>
             <td><label for="wprtsp_general_show_on">Show On</label></td>
