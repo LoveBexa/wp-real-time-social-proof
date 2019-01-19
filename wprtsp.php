@@ -866,11 +866,8 @@ class WPRTSP {
     function plugin_styles(){
         $screen = get_current_screen();
         
-		if( $screen->id == 'toplevel_page_' . basename( __FILE__ , '.php') ) {
-			wp_enqueue_style( 'wprtsp', $this->uri . 'assets/admin-styles.css' );
-        }
         if($screen->post_type == 'socialproof') {
-            wp_enqueue_style( 'wprtsp-cpt', $this->uri . 'assets/cpt-styles.css' );
+            wp_enqueue_style( 'wprtsp', $this->uri . 'assets/admin-styles.css' );
         }
         
     }

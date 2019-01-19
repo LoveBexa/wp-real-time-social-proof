@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 474 474">
+    <defs>
+        <style>
+        .cls-1{
+        fill:#0095ff44;
+        }
+        .cls-2{ fill:#0095ff00;
+        animation: fadeout1 2s linear 2s infinite normal both running;}
+        .cls-3{ fill:#0095ff00;
+        animation: fadeout1 2s linear 0s infinite normal both running;}
+        .cls-4{ fill:#0095ffff;
+        }
+
+        @keyframes fadeout1 {
+            0% {
+                transform: scale(1);
+                fill:#0095ff00;
+            }
+            50% {
+                transform: translate(-25%, -25%) scale(1.5);
+                fill:#0095ff44;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(2);
+                fill:#0095ff00;
+            }
+        }
+        </style>
+    </defs>
+    <title>livestats</title>
+    <g id="Layer_2" data-name="Layer 2">
+        <g id="Layer_1-2" data-name="Layer 1">
+            <circle class="cls-1" cx="237" cy="237" r="237"/>
+            <circle class="cls-2" cx="237" cy="237" r="177.75"/>
+            <circle class="cls-3" cx="237" cy="237" r="118.5"/>
+            <circle class="cls-4" cx="237" cy="237" r="59.25"/>
+        </g>
+    </g>
+</svg>
