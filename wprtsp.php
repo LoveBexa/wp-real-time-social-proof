@@ -77,6 +77,7 @@ class WPRTSP {
         add_action( 'save_post', array($this, 'save_meta_box_data' ) );
         //add_filter('wprtsp_get_proofs', array($this, 'wprtsp_get_proofs'));
         add_filter('wprtsp_vars', array($this, 'wprtsp_get_proofs'));
+        add_filter('wprtsp_vars', array($this, 'wprtsp_get_styles'));
         add_filter('wprtsp_get_proof_data_conversions_WooCommerce', array( $this, 'get_wooc_conversions'), 10, 2 );
         add_filter('wprtsp_get_proof_data_conversions_Easy_Digital_Downloads', array( $this, 'get_edd_conversions'), 10, 2 );
         add_filter('wprtsp_get_proof_data_conversions_Generated', array( $this, 'get_generated_conversions'), 10, 2 );
@@ -196,6 +197,19 @@ class WPRTSP {
             
             <?php
         
+    }
+
+    function wprtsp_get_styles( $vars ){
+        $styles = array(
+            'popup_container_style' => $this->get_popup_container_style($vars),
+            'container_wrap_style' => $this->get_container_wrap_style(),
+            'conversion_image_style' => $this->get_conversion_image_style(),
+            'conversion_text_style' => $this->get_conversion_text_style(),
+            'conversion_line1_style' => $this->get_conversion_line1_style(),
+            'conversion_line2_style' => $this->get_conversion_line2_style(),
+        );
+        $vars['styles'] = $styles;
+        return $vars;
     }
 
     function get_container_wrap_style(){
