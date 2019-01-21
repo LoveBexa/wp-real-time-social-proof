@@ -182,8 +182,8 @@ function wpsppro_sanitize( $request ) {
     $request['conversion_generated_action'] = array_key_exists('conversion_generated_action', $request)? sanitize_text_field( $request['conversion_generated_action'] ) : $defaults['conversion_generated_action'];
     $request['conversion_generated_product'] = array_key_exists('conversion_generated_product', $request)? sanitize_text_field( $request['conversion_generated_product'] ) : $defaults['conversion_generated_product'];
     
-    $request['conversion_template_line1'] = array_key_exists('conversion_template_line1', $settings) ? sanitize_text_field($request['conversion_template_line1']) :  $defaults['conversion_template_line1'];
-    $request['conversion_template_line2'] = array_key_exists('conversion_template_line2', $settings) ? sanitize_text_field($request['conversion_template_line2']) :  $defaults['conversion_template_line2'];
+    $request['conversion_template_line1'] = array_key_exists('conversion_template_line1', $request) ? sanitize_text_field($request['conversion_template_line1']) :  $defaults['conversion_template_line1'];
+    $request['conversion_template_line2'] = array_key_exists('conversion_template_line2', $request) ? sanitize_text_field($request['conversion_template_line2']) :  $defaults['conversion_template_line2'];
 
     $request['conversions_sound_notification'] = array_key_exists('conversions_sound_notification', $request) && $request['conversions_sound_notification'] ? true : false;
     $request['conversions_sound_notification_file'] = array_key_exists('conversions_sound_notification_file', $request) ? sanitize_text_field($request['conversions_sound_notification_file'] ) : $defaults['conversions_sound_notification_file'];

@@ -79,6 +79,13 @@ class WPRTSP {
         add_filter('wprtsp_vars', array($this, 'wprtsp_get_proofs'));
         add_filter('wprtsp_vars', array($this, 'wprtsp_get_styles'));
         add_filter('wprtsp_get_proof_data_conversions_WooCommerce', array( $this, 'get_wooc_conversions'), 10, 2 );
+        
+        add_filter('wprtsp_tag_WooCommerce_name', array($this, 'get_tag_WooCommerce_name'));
+        add_filter('wprtsp_tag_WooCommerce_location', array($this, 'get_tag_WooCommerce_location'));
+        add_filter('wprtsp_tag_WooCommerce_action', array($this, 'get_tag_WooCommerce_action'));
+        add_filter('wprtsp_tag_WooCommerce_product', array($this, 'get_tag_WooCommerce_product'));
+        add_filter('wprtsp_tag_WooCommerce_time', array($this, 'get_tag_WooCommerce_time'));
+        
         add_filter('wprtsp_get_proof_data_conversions_Easy_Digital_Downloads', array( $this, 'get_edd_conversions'), 10, 2 );
         add_filter('wprtsp_get_proof_data_conversions_Generated', array( $this, 'get_generated_conversions'), 10, 2 );
         add_action('wprtsp_general_meta_settings',array( $this, 'wprtsppro_general_meta' ) );
@@ -93,15 +100,15 @@ class WPRTSP {
     }
 
     function wprtsp_enabled($value, $settings) {
-    // check if desktop or mobile
-    // check if any proof is enabled
+        // check if desktop or mobile
+        // check if any proof is enabled
         return $settings['conversions_enable'];
     }
 
     function enqueue_scripts(){
         $notifications  = get_posts( array( 'post_type' => 'socialproof', 'posts_per_page' => -1 ) );
         $active_notifications = array();
-        foreach($notifications as $notification) {
+        foreach( $notifications as $notification ) {
             $meta = get_post_meta( $notification->ID, '_socialproof', true );
 
             $meta = $this->wprtsp_sanitize($meta);
@@ -201,18 +208,18 @@ class WPRTSP {
 
     function wprtsp_get_styles( $vars ){
         $styles = array(
-            'popup_container_style' => $this->get_popup_container_style($vars),
-            'container_wrap_style' => $this->get_container_wrap_style(),
+            'popup_style' => $this->get_popup_style($vars),
+            'popup_wrap_style' => $this->get_container_wrap_style(),
             'conversion_image_style' => $this->get_conversion_image_style(),
-            'conversion_text_style' => $this->get_conversion_text_style(),
-            'conversion_line1_style' => $this->get_conversion_line1_style(),
-            'conversion_line2_style' => $this->get_conversion_line2_style(),
+            'line1_style' => $this->get_conversion_line1_style(),
+            'line2_style' => $this->get_conversion_line2_style(),
         );
         $vars['styles'] = $styles;
         return $vars;
     }
 
     function get_container_wrap_style(){
+        return 'display: flex; padding: 1em; align-items: center; justify-content: space-evenly';
         return 'display:flex;align-items:center;line-height: 1em;';
     }
 
@@ -232,7 +239,7 @@ class WPRTSP {
         return apply_filters('wprtsp_popup_style_line2', 'display:block;white-space: nowrap;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,helvetica,arial,sans-serif !important; font-size: 13px;font-weight: 300;');
     }
 
-    function get_popup_container_style($settings) {
+    function get_popup_style($settings) {
         switch($settings['general_position']) {
             case 'bl': $position_css = 'bottom: 10px; left:10px';
             break;
@@ -240,7 +247,7 @@ class WPRTSP {
             break;
         }
 
-        return apply_filters('wprtsp_popup_container_style', 'all: unset;display:none; border-radius: 500px; position:fixed; bottom:10px; '.$position_css.'; z-index:9999; background: white; padding: 1em 2.618em; box-shadow: 20px 20px 60px 0 rgba(36,35,40,.1);');
+        return apply_filters('wprtsp_popup_style', 'display:none; border-radius: 500px; position:fixed; bottom:10px; bottom: 10px; z-index:9999; background: white; margin: 0 0 0 0; box-shadow: 20px 20px 60px 0 rgba(36,35,40,.1); '.$position_css.'; ');
     }
 
     function get_wooc_conversions($settings) {
@@ -286,14 +293,55 @@ class WPRTSP {
             $messages[] = array(
                 'link' => $customers[$purchase]['product_link'],
                 'name' => $name,
-                'location' => $order_data['billing']['city'] . ', ' . $order_data['billing']['country'],
+                'location' => implode(', ', array_filter(array($order_data['billing']['city'],$order_data['billing']['country']))),
                 'action' => 'purchased',
                 'product' => $customers[$purchase]['product'],
-                'time' => $customers[$purchase]['time']
+                'time' => $customers[$purchase]['time'] . ' ago'
             );
         }
-        
+        $messages = $this->translate_placeholders( $messages, $settings );
         return $messages;
+    }
+
+    function translate_placeholders( $records, $settings ) {
+        $template1 =  $settings['conversion_template_line1'];
+        $template2 =  $settings['conversion_template_line2'];
+        $messages = array();
+
+        $i = 0;
+        foreach( $records as $key => $value) {
+            $messages[$i]['line1'] = '<span class="wprtsp_line1">' . preg_replace_callback( "/{.+?}/", function($matches) use($value, $settings){
+                $key = preg_replace('/[^\da-z]/i', '', $matches[0]);
+                return apply_filters('wprtsp_tag_'.$settings['conversions_shop_type'].'_'.$key, $value[$key] );
+            }, $template1 ) . '</span>' ;
+            $messages[$i]['line2'] = '<span class="wprtsp_line2">' . preg_replace_callback( "/{.+?}/", function($matches) use($value, $settings){
+                $key = preg_replace('/[^\da-z]/i', '', $matches[0]);
+                return apply_filters('wprtsp_tag_'.$settings['conversions_shop_type'].'_'.$key, $value[$key] );
+            }, $template2 ) . '</span>';
+            $messages[$i]['link'] = $value['link'];
+           $i++;
+        }
+        return $messages;
+    }
+
+    function get_tag_WooCommerce_name($name){
+        return  "<span class=\"wprtsp_name\">$name</span>";
+    }
+
+    function get_tag_WooCommerce_action($action){
+        return  "<span class=\"wprtsp_action\">$action</span>";
+    }
+
+    function get_tag_WooCommerce_product($product){
+        return  "<span class=\"wprtsp_product\">$product</span>";
+    }
+
+    function get_tag_WooCommerce_time($time){
+        return  "<span class=\"wprtsp_time\">$time</span>";
+    }
+
+    function get_tag_WooCommerce_location($location){
+        return empty($location)? '' : " <span class=\"wprtsp_location\">from $location </span>";
     }
 
     function get_edd_conversions($settings) {
@@ -490,7 +538,7 @@ class WPRTSP {
                 'conversions_show_on_mobile' => true,
                 'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ),
                 'conversion_template_line1' => '{name} {location}',
-                'conversion_template_line2' => '{action} {product} {time}',
+                'conversion_template_line2' => 'just {action} {product} {time}.',
                 'conversion_generated_action' => 'subscribed to the',
                 'conversion_generated_product' => 'newsletter',
                 //'conversions_transaction' => 'subscribed to the newsletter',
@@ -731,6 +779,7 @@ class WPRTSP {
         }
         
         $request = $_POST['wprtsp'];
+        
         $settings = $this->wprtsp_sanitize($request);
         $settings = apply_filters('wprtsp_cpt_update_settings', $settings);
 
