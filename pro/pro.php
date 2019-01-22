@@ -884,7 +884,7 @@ function wprtspro_hotstats_wooc( $hotstats = array(), $settings ) {
     }
     
     $value = $settings['hotstats_timeframe'];
-    $period = ($value >= 0 ) ?  ( time() - ( $value * DAY_IN_SECONDS ))  : false;
+    $period = ($value >= 0 ) ?  '>'.( time() - ( $value * DAY_IN_SECONDS ))  : false;
     $args = array(
         'limit' => 100,
         'orderby' => 'date',
@@ -893,18 +893,22 @@ function wprtspro_hotstats_wooc( $hotstats = array(), $settings ) {
         'status' => 'completed',
         
     );
+
     if($period) {
-        $query['date_completed'] = $period;
+        $args['date_created'] = $period;
     }
-    $query = new WC_Order_Query( $args );
-    $orders = $query->get_orders();
-    $records =array(
-        'sales' => array(
-            'count' => count($orders),
-            'action' => 'products sold',
-        )
-    );
-    return $records;
+   
+    $orders = wc_get_orders( $args );
+    
+    $count = count($orders);
+    if($count) {
+        $strtime = $period ? 'in the last ' . $value . ' days.' : 'till date.' ;
+        $hotstats[] = array(
+            'line1' => $count . ' products sold',
+            'line2' => $strtime,
+        );
+    }
+    return $hotstats;
 }
 
 function wprtspro_hotstats_edd( $hotstats , $settings ) {
