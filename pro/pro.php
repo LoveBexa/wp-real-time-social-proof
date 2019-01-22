@@ -21,7 +21,12 @@ add_filter( 'wprtsp_conversions_sound_notification_markup', 'wprtspro_conversion
 add_filter( 'wprtsp_sound_notification_file', 'wprtspro_sound_notification_file', 10 , 2);
 add_filter( 'wprtsp_get_proof_data_hotstats_WooCommerce', 'wprtspro_hotstats_wooc', 10, 2);
 add_filter( 'wprtsp_get_proof_data_hotstats_Easy_Digital_Downloads', 'wprtspro_hotstats_edd', 10, 2);
+add_filter('wprtsp_vars', 'wpsppro_add_vars');
 
+function wpsppro_add_vars($vars){
+    //$vars['sitename'] = get_bloginfo('name');
+    return $vars;
+}
 function wprtsppro_save_gaprofile(){
     //https://dev.converticacommerce.com/woocommerce-sandbox/wp-admin/post.php?post=204&action=edit&origin_nonce=4c990a9bb6&gaapi_accountid=107074057&gaapi_webpropertyid=159840733&gaapi_webpropertyua=UA-107074057-1&gaapi_profileid=161102233&wpsppro-action=oauth&success=1
     //llog('hello');

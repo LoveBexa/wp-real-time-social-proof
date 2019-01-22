@@ -1,5 +1,4 @@
 settings = JSON.parse(wprtsp_vars);
-console.dir(settings);
 clock = false;
 flag = false;
 current_proof_type = false;
@@ -8,8 +7,12 @@ wprtsp_conversions_messages = [];
 wprtsp_hotstats_messages = [];
 wprtsp_livestats_messages = [];
 wprtsp_ctas_messages = [];
-debug = true;
+debug = false;
 title = false;
+titletimer = false;
+
+llog(settings);
+
 function llog($str){
     if(debug) {
         console.dir($str);
@@ -57,7 +60,7 @@ if (jQuery) {
     });
 }
 else {
-    console.log('no jq');
+    llog('no jq');
 }
 
 function wprtsp_show_message() {
@@ -69,12 +72,12 @@ function wprtsp_show_message() {
     }
     jQuery('#wprtsp_pop').slideDown(300, function () {
         //${"dynamic".$i}
-        //console.log();
-        console.log(current_proof_type);
+        //llog();
+        llog(current_proof_type);
         if(eval(`settings.${current_proof_type}_sound_notification`) ){
-            //console.log( eval(  `settings.${current_proof_type}_sound_notification_file` ) ) ;
+            //llog( eval(  `settings.${current_proof_type}_sound_notification_file` ) ) ;
             src = `${settings.url}assets/sounds/` + eval( `settings.${current_proof_type}_sound_notification_file` );
-            //console.log(src);
+            //llog(src);
             var wprtsp_audio = jQuery('#wprtsp_audio').length ? jQuery('#wprtsp_audio') : jQuery('<audio/>', {
                 id: 'wprtsp_audio',
                 class: 'wprtsp_audio',
@@ -86,14 +89,18 @@ function wprtsp_show_message() {
         }
         if(eval(`settings.${current_proof_type}_title_notification`) ){
             title = jQuery(document).attr("title");
-            llog(title);
-            jQuery(document).attr('title',"Social Proof says…");
+            titletimer = setInterval(titlenotification, 2000);
         }
         jQuery("#wprtsp_pop").contents().find("#wprtsp").html(message);
         jQuery('#wprtsp_pop').css('height', jQuery("#wprtsp_pop").contents().find("html").height());
         jQuery('#wprtsp_pop').css('width', jQuery("#wprtsp_pop").contents().find("body").width());
     }).delay(settings.general_duration * 1000).slideUp(300, function () {
-        jQuery(document).attr('title',title);
+        
+        if(title){
+            jQuery(document).attr('title',title);
+            clearInterval(titletimer);
+            title = false;
+        }
         clock = setTimeout(wprtsp_show_message, settings.general_subsequent_popup_time * 1000);
     });
 
@@ -107,27 +114,35 @@ function wprtsp_show_message() {
     });
 }
 
+function titlenotification(){
+    if(document.title != 'Rachel says…'){
+        jQuery(document).attr('title', 'Rachel says…');
+    }
+    else {
+        jQuery(document).attr('title', title);
+    }
+}
 function wprtsp_get_message() {
     if (flag == 's') {
-        console.log(flag);
+        llog(flag);
         set_next_flag();
         current_proof_type = 'conversions';
         return wprtsp_conversions_messages.shift();
     }
     if (flag == 'h') {
-        console.log(flag);
+        llog(flag);
         set_next_flag();
         current_proof_type = 'hotstats';
         return wprtsp_hotstats_messages.shift();
     }
     if (flag == 'l') {
-        console.log(flag);
+        llog(flag);
         set_next_flag();
         current_proof_type = 'livestats';
         return wprtsp_livestats_messages.shift();
     }
     if (flag == 'c') {
-        console.log(flag);
+        llog(flag);
         // once CTA is shown, no need to show newer popups
         //set_next_flag();
         current_proof_type = 'ctas';
@@ -139,22 +154,22 @@ function wprtsp_get_message() {
 function init_flag() {
     if (wprtsp_conversions_messages.length) {
         flag = 's';
-        console.log('initiated flag to ' + flag);
+        llog('initiated flag to ' + flag);
         return;
     }
     if (wprtsp_hotstats_messages.length) {
         flag = 'h';
-        console.log('initiated flag to ' + flag);
+        llog('initiated flag to ' + flag);
         return;
     }
     if (wprtsp_livestats_messages.length) {
         flag = 'l';
-        console.log('initiated flag to ' + flag);
+        llog('initiated flag to ' + flag);
         return;
     }
     if (wprtsp_ctas_messages.length) {
         flag = 'c';
-        console.log('initiated flag to ' + flag);
+        llog('initiated flag to ' + flag);
         return;
     }
 }
@@ -240,7 +255,7 @@ function build_hotstats() {
     for (i = 0; i < settings.proofs.hotstats.length; i++) {
         wprtsp_hotstats_messages.push(hotstats_html(settings.proofs.hotstats[i]));
     }
-    console.dir(wprtsp_hotstats_messages);
+    llog(wprtsp_hotstats_messages);
 }
 
 function hotstats_html(hotstat) {
@@ -253,14 +268,14 @@ function hotstats_html(hotstat) {
 }
 
 function build_livestats() {
-    //console.log(settings.proofs.livestats);
+    //llog(settings.proofs.livestats);
 }
 
 function build_ctas() {
     for (i = 0; i < settings.proofs.ctas.length; i++) {
         wprtsp_ctas_messages.push(ctas_html(settings.proofs.ctas[i]));
     }
-    console.dir(wprtsp_ctas_messages);
+    llog(wprtsp_ctas_messages);
 }
 
 function ctas_html(cta) {
