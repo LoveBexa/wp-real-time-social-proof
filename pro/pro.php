@@ -19,6 +19,7 @@ add_filter( 'wprtsp_cpt_defaults', 'wprtsppro_get_cpt_defaults');
 add_filter( 'wprtsp_conversions_sound_notification_markup', 'wprtspro_conversions_sound_notification_markup', 10 , 2);
 add_filter( 'wprtsp_sound_notification_file', 'wprtspro_sound_notification_file', 10 , 2);
 add_filter( 'wprtsp_get_proof_data_hotstats_WooCommerce', 'wprtspro_hotstats_wooc', 10, 2);
+add_filter( 'wprtsp_get_proof_data_hotstats_Easy_Digital_Downloads', 'wprtspro_hotstats_edd', 10, 2);
 
 function wprtsppro_save_gaprofile(){
     //https://dev.converticacommerce.com/woocommerce-sandbox/wp-admin/post.php?post=204&action=edit&origin_nonce=4c990a9bb6&gaapi_accountid=107074057&gaapi_webpropertyid=159840733&gaapi_webpropertyua=UA-107074057-1&gaapi_profileid=161102233&wpsppro-action=oauth&success=1
@@ -56,20 +57,19 @@ function wprtsppro_save_gaprofile(){
     }
 }
 
-function wpsppro_enabled($enabled, $settings) {
+function wpsppro_enabled( $enabled, $settings ) {
    
-    if(!wp_is_mobile()) { // we are on desktop
-        if($settings['conversions_enable'] || $settings['hotstats_enable'] || $settings['livestats_enable'] || $settings['ctas_enable']) {
+    if( ! wp_is_mobile() ) { // we are on desktop
+        if( $settings['conversions_enable'] || $settings['hotstats_enable'] || $settings['livestats_enable'] || $settings['ctas_enable'] ) {
             return true;
         }
         
     }
     else { //we are on mobile
-        if($settings['conversions_enable_mob'] || $settings['hotstats_enable_mob'] || $settings['livestats_enable_mob'] || $settings['ctas_enable_mob']) {
+        if( $settings['conversions_enable_mob'] || $settings['hotstats_enable_mob'] || $settings['livestats_enable_mob'] || $settings['ctas_enable_mob'] ) {
             return true;
         }
     }
-    
     return $enabled;
 }
 
@@ -114,41 +114,41 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         'general_show_on' => '1', // select
         'general_post_ids' => get_option( 'page_on_front'), // string
         'general_position' => 'bl', // select
-        'general_badge_enable' => true, // bool
+        'general_badge_enable' => 1, // bool
         'general_initial_popup_time' => '5', // select
         'general_duration' => '4', // select
         'general_subsequent_popup_time' => '30', // select
 
-        'conversions_enable' => true, // bool
-        'conversions_enable_mob' => true, // bool
-        'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ), // string
+        'conversions_enable' => 1, // bool
+        'conversions_enable_mob' => 1, // bool
+        'conversions_shop_type' => apply_filters('wprtsp_shop_type', class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' )),
         'conversion_template_line1' => '{name} {location}',
         'conversion_template_line2' => '{action} {product} {time}',
         'conversion_generated_action' => 'subscribed to the',
         'conversion_generated_product' => 'newsletter',
-        'conversions_sound_notification' => false, // bool
+        'conversions_sound_notification' => 0, // bool
         'conversions_sound_notification_file' => 'salient.mp3', // string
-        'conversions_title_notification' => false, // bool
+        'conversions_title_notification' => 0, // bool
         
-        'livestats_enable' => true, // bool
-        'livestats_enable_mob' => true, // bool
-        'livestats_sound_notification' => false, // bool
+        'livestats_enable' => 1, // bool
+        'livestats_enable_mob' => 1, // bool
+        'livestats_sound_notification' => 0, // bool
         'livestats_sound_notification_file' => 'salient.mp3', // string
-        'livestats_title_notification' => false, // bool
+        'livestats_title_notification' => 0, // bool
 
-        'hotstats_enable' => true,
-        'hotstats_enable_mob' => true,
-        'hotstats_sound_notification' => false, // bool
+        'hotstats_enable' => 1,
+        'hotstats_enable_mob' => 1,
+        'hotstats_sound_notification' => 0, // bool
         'hotstats_sound_notification_file' => 'salient.mp3', // string
-        'hotstats_title_notification' => false, // bool
+        'hotstats_title_notification' => 0, // bool
         'hotstats_timeframe' => 1,
         'hotstats_timeframes' => array(1, 2, 3, 7, 30, -1),
 
-        'ctas_enable' => true,
-        'ctas_enable_mob' => true,
-        'ctas_sound_notification' => true, // bool
+        'ctas_enable' => 1,
+        'ctas_enable_mob' => 1,
+        'ctas_sound_notification' => 1, // bool
         'ctas_sound_notification_file' => 'demonstrative.mp3', // string
-        'ctas_title_notification' => true, // bool
+        'ctas_title_notification' => 1, // bool
         'ctas' => array( array('title' => 'Offer just for you', 'message' => 'Get 15% discount with coupon INSERTCOUPONHERE')),
 
         'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right', 'c' => 'Center'),
@@ -171,12 +171,12 @@ function wpsppro_sanitize( $request ) {
     $request['general_duration'] = array_key_exists('general_duration', $request)? sanitize_text_field( $request['general_duration'] ) : $defaults['general_duration'];
     $request['general_initial_popup_time'] = array_key_exists('general_initial_popup_time', $request)? sanitize_text_field( $request['general_initial_popup_time'] ) : $defaults['general_initial_popup_time'];
     $request['general_subsequent_popup_time'] = array_key_exists('general_subsequent_popup_time', $request)? sanitize_text_field( $request['general_subsequent_popup_time'] ) : $defaults['general_subsequent_popup_time'];
-    $request['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? true : false;
+    $request['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? 1 : 0;
 
 
-    $request['conversions_enable'] = array_key_exists('conversions_enable', $request) && $request['conversions_enable'] ? true : false;
-    $request['conversions_enable_mob'] = array_key_exists('conversions_enable_mob',  $request) && $request['conversions_enable_mob'] ? true : false;
-    $request['conversions_title_notification'] = array_key_exists('conversions_title_notification', $request) && $request['conversions_title_notification'] ? true : false;
+    $request['conversions_enable'] = array_key_exists('conversions_enable', $request) && $request['conversions_enable'] ? 1 : 0;
+    $request['conversions_enable_mob'] = array_key_exists('conversions_enable_mob',  $request) && $request['conversions_enable_mob'] ? 1 : 0;
+    $request['conversions_title_notification'] = array_key_exists('conversions_title_notification', $request) && $request['conversions_title_notification'] ? 1 : 0;
 
     $request['conversions_shop_type'] = array_key_exists('conversions_shop_type', $request)?sanitize_text_field($request['conversions_shop_type'] ) : $defaults['general_post_ids'];
     $request['conversion_generated_action'] = array_key_exists('conversion_generated_action', $request)? sanitize_text_field( $request['conversion_generated_action'] ) : $defaults['conversion_generated_action'];
@@ -185,27 +185,27 @@ function wpsppro_sanitize( $request ) {
     $request['conversion_template_line1'] = array_key_exists('conversion_template_line1', $request) ? sanitize_text_field($request['conversion_template_line1']) :  $defaults['conversion_template_line1'];
     $request['conversion_template_line2'] = array_key_exists('conversion_template_line2', $request) ? sanitize_text_field($request['conversion_template_line2']) :  $defaults['conversion_template_line2'];
 
-    $request['conversions_sound_notification'] = array_key_exists('conversions_sound_notification', $request) && $request['conversions_sound_notification'] ? true : false;
+    $request['conversions_sound_notification'] = array_key_exists('conversions_sound_notification', $request) && $request['conversions_sound_notification'] ? 1 : 0;
     $request['conversions_sound_notification_file'] = array_key_exists('conversions_sound_notification_file', $request) ? sanitize_text_field($request['conversions_sound_notification_file'] ) : $defaults['conversions_sound_notification_file'];
-    $request['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? true : false;
+    $request['general_badge_enable'] = array_key_exists('general_badge_enable', $request) && $request['general_badge_enable'] ? 1 : 0;
 
-    $request['livestats_enable'] = array_key_exists('livestats_enable', $request) && $request['livestats_enable'] ? true : false;
-    $request['livestats_enable_mob'] = array_key_exists('livestats_enable_mob', $request) && $request['livestats_enable_mob'] ? true : false;
-    $request['livestats_title_notification'] = array_key_exists('livestats_title_notification', $request) && $request['livestats_title_notification'] ? true : false;
-    $request['livestats_sound_notification'] = array_key_exists('livestats_sound_notification', $request) && $request['livestats_sound_notification'] ? true : false;
+    $request['livestats_enable'] = array_key_exists('livestats_enable', $request) && $request['livestats_enable'] ? 1 : 0;
+    $request['livestats_enable_mob'] = array_key_exists('livestats_enable_mob', $request) && $request['livestats_enable_mob'] ? 1 : 0;
+    $request['livestats_title_notification'] = array_key_exists('livestats_title_notification', $request) && $request['livestats_title_notification'] ? 1 : 0;
+    $request['livestats_sound_notification'] = array_key_exists('livestats_sound_notification', $request) && $request['livestats_sound_notification'] ? 1 : 0;
     $request['livestats_sound_notification_file'] = array_key_exists('livestats_sound_notification_file', $request) ? sanitize_text_field($request['livestats_sound_notification_file'] ) : $defaults['livestats_sound_notification_file'];
 
-    $request['hotstats_enable'] = array_key_exists('hotstats_enable', $request) && $request['hotstats_enable'] ? true : false;
-    $request['hotstats_enable_mob'] = array_key_exists('hotstats_enable_mob', $request) && $request['hotstats_enable_mob'] ? true : false;
-    $request['hotstats_title_notification'] = array_key_exists('hotstats_title_notification', $request) && $request['hotstats_title_notification'] ? true : false;
-    $request['hotstats_sound_notification'] = array_key_exists('hotstats_sound_notification', $request) && $request['hotstats_sound_notification'] ? true : false;
+    $request['hotstats_enable'] = array_key_exists('hotstats_enable', $request) && $request['hotstats_enable'] ? 1 : 0;
+    $request['hotstats_enable_mob'] = array_key_exists('hotstats_enable_mob', $request) && $request['hotstats_enable_mob'] ? 1 : 0;
+    $request['hotstats_title_notification'] = array_key_exists('hotstats_title_notification', $request) && $request['hotstats_title_notification'] ? 1 : 0;
+    $request['hotstats_sound_notification'] = array_key_exists('hotstats_sound_notification', $request) && $request['hotstats_sound_notification'] ? 1 : 0;
     $request['hotstats_sound_notification_file'] = array_key_exists('hotstats_sound_notification_file', $request) ? sanitize_text_field($request['hotstats_sound_notification_file'] ) : $defaults['hotstats_sound_notification_file'];
     $request['hotstats_timeframe'] = array_key_exists('hotstats_timeframe', $request) ? sanitize_text_field($request['hotstats_timeframe']) : $defaults['hotstats_timeframe'];
     
-    $request['ctas_enable'] = array_key_exists('ctas_enable', $request) && $request['ctas_enable'] ? true : false;
-    $request['ctas_enable_mob'] = array_key_exists('ctas_enable_mob', $request) && $request['ctas_enable_mob'] ? true : false;
-    $request['ctas_title_notification'] = array_key_exists('ctas_title_notification', $request) && $request['ctas_title_notification'] ? true : false;
-    $request['ctas_sound_notification'] = array_key_exists('ctas_sound_notification', $request) && $request['ctas_sound_notification'] ? true : false;
+    $request['ctas_enable'] = array_key_exists('ctas_enable', $request) && $request['ctas_enable'] ? 1 : 0;
+    $request['ctas_enable_mob'] = array_key_exists('ctas_enable_mob', $request) && $request['ctas_enable_mob'] ? 1 : 0;
+    $request['ctas_title_notification'] = array_key_exists('ctas_title_notification', $request) && $request['ctas_title_notification'] ? 1 : 0;
+    $request['ctas_sound_notification'] = array_key_exists('ctas_sound_notification', $request) && $request['ctas_sound_notification'] ? 1 : 0;
     $request['ctas_sound_notification_file'] = array_key_exists('ctas_sound_notification_file', $request) ? sanitize_text_field($request['ctas_sound_notification_file'] ) : $defaults['ctas_sound_notification_file'];
 
     if(array_key_exists('ctas', $request)) {
@@ -458,14 +458,16 @@ function wpsppro_conversions_meta_box(){
     $( document ).ready(function() {
         $('#wprtsp_conversions_shop_type').on('change',  function() {
             if($('#wprtsp_conversions_shop_type').val() == 'Generated' ) {
-                $('#wprtsp_conversions_transaction').removeAttr('readonly');
-                $('#wprtsp_conversions_transaction_alt').removeAttr('readonly');
+                //$('#wprtsp_conversions_transaction').removeAttr('readonly');
+                console.log('Generated');
+                $('#wprtsp_conversion_generated_action').removeAttr('readonly');
+                $('#wprtsp_conversion_generated_product').removeAttr('readonly');
             }
             else {
-                //$('#wprtsp_conversions_transaction').closest('tr').hide();
-                //$('#wprtsp_conversions_transaction_alt').closest('tr').hide();
-                $('#wprtsp_conversions_transaction_alt').attr('readonly', 'true');
-                $('#wprtsp_conversions_transaction').attr('readonly', 'true');
+                console.log($('#wprtsp_conversions_shop_type').val());
+                //$('#wprtsp_conversions_transaction').attr('readonly', 'true');
+                $('#wprtsp_conversion_generated_action').attr('readonly', 'true');
+                $('#wprtsp_conversion_generated_product').attr('readonly', 'true');
             }
         });
         $('#wprtsp_conversions_sound_notification').change(function() {
@@ -710,11 +712,14 @@ function wpsppro_ctas_meta_box() {
     $wprtsp = WPRTSP::get_instance();
 
     $settings = get_post_meta($post->ID, '_socialproof', true);
+    
     if(! $settings) {
         $settings = wprtsppro_get_cpt_defaults();
     }
     $defaults = wprtsppro_get_cpt_defaults();
     $settings = wpsppro_sanitize($settings);
+    
+    
     $ctas = $settings['ctas'];
     $ctas_enable =  $settings['ctas_enable'];
     $ctas_enable_mob =  $settings['ctas_enable_mob'];
@@ -879,17 +884,19 @@ function wprtspro_hotstats_wooc( $hotstats = array(), $settings ) {
     }
     
     $value = $settings['hotstats_timeframe'];
-
-    $period = ($value >= 0 ) ? '>'.( time() - ( $value * DAY_IN_SECONDS ))  : false;
-    
-    $query = new WC_Order_Query( array(
+    $period = ($value >= 0 ) ?  ( time() - ( $value * DAY_IN_SECONDS ))  : false;
+    $args = array(
         'limit' => 100,
         'orderby' => 'date',
         'order' => 'DESC',
         'return' => 'ids',
         'status' => 'completed',
-        'date_completed' => $period ? $period : false,
-    ) );
+        
+    );
+    if($period) {
+        $query['date_completed'] = $period;
+    }
+    $query = new WC_Order_Query( $args );
     $orders = $query->get_orders();
     $records =array(
         'sales' => array(
@@ -900,54 +907,42 @@ function wprtspro_hotstats_wooc( $hotstats = array(), $settings ) {
     return $records;
 }
 
-function get_edd_hoststats($timeframe) {
+function wprtspro_hotstats_edd( $hotstats , $settings ) {
     if(! class_exists('Easy_Digital_Downloads')){
         return array();
     }
+    
+    $value = $settings['hotstats_timeframe'];
+
+    $period = ($value >= 0 ) ?  ( time() - ( $value * DAY_IN_SECONDS ))  : false;
+
+    $strtime = $period ? 'in the last ' . $value . ' days.' : 'till date.' ;
+
     $args = array(
         'numberposts'      => 100,
         'post_status'      => 'publish',			
         'post_type'        => 'edd_payment',
         'suppress_filters' => true, 
-        );						
-    $payments = get_posts( $args );			
-    $records = array();
-    $messages = array();
-    if ( $payments ) { 
-        foreach ( $payments as $payment_post ) { 
-            setup_postdata($payment_post);
-            $payment      = new EDD_Payment( $payment_post->ID );
-            if(empty($payment->ID)) {
-                continue;
-            }
-            
-            $payment_time   = human_time_diff(strtotime( $payment->date ), current_time('timestamp'));
-            $customer       = new EDD_Customer( $payment->customer_id );
-            $downloads = $payment->cart_details;
-            $downloads = array_slice($downloads, 0, 1, true);
-            $name = '';
-            if( array_key_exists('first_name', $payment->user_info) && ! empty( $payment->user_info['first_name'] ) ) {
-                $name = $payment->user_info['first_name'];
-            }
-            if( array_key_exists('last_name', $payment->user_info) && ! empty( $payment->user_info['last_name'] ) ) {
-                $name .= ' '.$payment->user_info['last_name'];
-            }
-            if(empty(trim($name))) {
-                $name = 'Someone';
-            }
-            $records[$payment_post->ID] = array('product_link'=>get_permalink( $downloads[0]['id'] ),'first_name' => $payment->user_info['first_name'], 'last_name' => $payment->user_info['last_name'], 'transaction' => 'purchased', 'product' => $downloads[0]['name'] , 'time' => $payment_time);
-            $messages[] = array(
-                'link' => get_permalink( $downloads[0]['id'] ),
-                'name' => $name,
-                'product' => $downloads[0]['name'],
-                'time' => $payment_time
-            );
-            //apply_filters('wprtsp_edd_conversion_message','<a href="'.get_permalink( $downloads[0]['id'] ).'"><span class="wprtsp_conversion_icon" style="'.$this->get_conversion_icon_style().'"></span><span class="wprtsp_line1" style="'. $this->get_message_style_line1() . '">' . $name . '</span><span class="wprtsp_line2" style="' . $this->get_message_style_line2() . '"> purchased ' . $downloads[0]['name'] . ' ' . $payment_time . ' ago.</span></a>',$records[$payment_post->ID]);
-        }
+        );
+
+    if( $period )	 {
+        $args['date_query'] = array(
+                'after' => date('c', $period)
+        );
+    }
+    //llog($args);
+    $payments = new WP_Query( $args );			
+    
+    if ( $payments->post_count > 0 ) {
+        //llog($payments);
+        $hotstats[] = array(
+            'line1' => $payments->post_count .' products sold',
+            'line2' => $strtime,
+        );
         wp_reset_postdata();
     }
     
-    return $messages;
+    return $hotstats;
 }
 
 

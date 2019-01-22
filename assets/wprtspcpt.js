@@ -11,10 +11,16 @@ wprtsp_ctas_messages = [];
 if (jQuery) {
     jQuery(document).ready(function ($) {
         // console.log(settings.conversions_enable);
+        //has proofs && has enabling && is enabled && proof has records
         if (settings.proofs) {
-            if (settings.proofs.conversions && settings.proofs.conversions.length) {
+            if( settings.hasOwnProperty('conversions_enable_mob') && settings.conversions_enable_mob && settings.is_mobile && settings.proofs.conversions && settings.proofs.conversions.length) {
                 build_conversions();
-                //console.dir(wprtsp_conversions_messages);
+            }
+            if( settings.hasOwnProperty('conversions_enable') && settings.conversions_enable && ! settings.is_mobile && settings.proofs.conversions && settings.proofs.conversions.length) {
+                build_conversions();
+            }
+            if ( ! settings.hasOwnProperty('conversions_enable') && settings.proofs.conversions && settings.proofs.conversions.length )  {
+                build_conversions();
             }
             /*
             if (settings.proofs.hotstats && settings.proofs.hotstats.length) {
@@ -33,7 +39,7 @@ if (jQuery) {
             frameborder: '0',
             scrolling: 'no',
             style: settings.styles.popup_style,
-            srcdoc: '<html><head><style>* {margin: 0; padding: 0;} a { color: inherit; text-decoration: none;}</style></head><body id="wprtsp" style="display:table"></body></html>',
+            srcdoc: '<html><head><style>* {margin: 0; padding: 0;} a { color: inherit; text-decoration: none;} body{font-size: 13px;}</style></head><body id="wprtsp" style="display:table"></body></html>',
         }).appendTo('body');
         clock = setTimeout( wprtsp_show_message, settings.general_initial_popup_time * 1000 );
         }
