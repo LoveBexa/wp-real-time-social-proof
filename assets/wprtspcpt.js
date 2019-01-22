@@ -1,7 +1,7 @@
 settings = JSON.parse(wprtsp_vars);
 console.dir(settings);
 clock = false;
-flag = 's';
+flag = false;
 wprtsp_pop = false;
 wprtsp_conversions_messages = [];
 wprtsp_hotstats_messages = [];
@@ -10,8 +10,6 @@ wprtsp_ctas_messages = [];
 
 if (jQuery) {
     jQuery(document).ready(function ($) {
-        // console.log(settings.conversions_enable);
-        //has proofs && has enabling && is enabled && proof has records
         if (settings.proofs) {
             if( settings.hasOwnProperty('conversions_enable_mob') && settings.conversions_enable_mob && settings.is_mobile && settings.proofs.conversions && settings.proofs.conversions.length) {
                 build_conversions();
@@ -22,34 +20,30 @@ if (jQuery) {
             if ( ! settings.hasOwnProperty('conversions_enable') && settings.proofs.conversions && settings.proofs.conversions.length )  {
                 build_conversions();
             }
-            
-            if ( settings.hasOwnProperty('hotstats_enable') && settings.hotstats && ! settings.is_mobile && settings.proofs.hotstats && settings.proofs.hotstats.length ||
-            settings.hasOwnProperty('hotstatss_enable_mob') && settings.hotstats_enable_mob && settings.is_mobile && settings.proofs.hotstats && settings.proofs.hotstats.length
+            if ( settings.hasOwnProperty('hotstats_enable') && settings.hotstats_enable && ! settings.is_mobile && settings.proofs.hotstats && settings.proofs.hotstats.length ||
+            settings.hasOwnProperty('hotstats_enable_mob') && settings.hotstats_enable_mob && settings.is_mobile && settings.proofs.hotstats && settings.proofs.hotstats.length
             ) {
                 build_hotstats();
             }
 
+            if ( settings.hasOwnProperty('livestats_enable') && settings.livestats_enable && ! settings.is_mobile && settings.proofs.livestats && settings.proofs.livestats.length ||
+            settings.hasOwnProperty('livestats_enable_mob') && settings.livestats_enable_mob && settings.is_mobile && settings.proofs.livestats && settings.proofs.livestats.length
+            ) {
+                build_livestats();
+            }
             if ( settings.hasOwnProperty('ctas_enable') && settings.ctas_enable && ! settings.is_mobile && settings.proofs.ctas && settings.proofs.ctas.length ||
             settings.hasOwnProperty('ctas_enable_mob') && settings.ctas_enable_mob && settings.is_mobile && settings.proofs.ctas && settings.proofs.ctas.length
             ) {
                 build_ctas();
             }
-
-            /*
-            if (settings.proofs.livestats && settings.proofs.livestats.length) {
-                livestatdata = build_livestats();
-            }
-            if (settings.proofs.ctas && settings.proofs.ctas.length) {
-                ctadata = build_ctas();
-            }
-            */
-           wprtsp_pop = jQuery('#wprtsp_pop').length ? jQuery('#wprtsp_pop') : jQuery('<iframe/>', {
+            init_flag();
+            wprtsp_pop = jQuery('#wprtsp_pop').length ? jQuery('#wprtsp_pop') : jQuery('<iframe/>', {
             id: 'wprtsp_pop',
             class: 'wprtsp_pop',
             frameborder: '0',
             scrolling: 'no',
             style: settings.styles.popup_style,
-            srcdoc: '<html><head><style>* {margin: 0; padding: 0;} a { color: inherit; text-decoration: none;} body{font-size: 13px;}</style></head><body id="wprtsp" style="display:table"></body></html>',
+            srcdoc: '<html><head><base target="_parent"><style>* {margin: 0; padding: 0;} a { color: inherit; text-decoration: none;} body{font-size: 13px;}</style></head><body id="wprtsp" style="display:table"></body></html>',
         }).appendTo('body');
         clock = setTimeout( wprtsp_show_message, settings.general_initial_popup_time * 1000 );
         }
@@ -61,14 +55,17 @@ else {
 
 function wprtsp_show_message() {
     message = wprtsp_get_message();
+    if(! message ) {
+        try{clearTimeout(clock);}
+        catch(e){}
+        return;
+    }
     jQuery('#wprtsp_pop').slideDown(200, function () {
         jQuery("#wprtsp_pop").contents().find("#wprtsp").html(message);
         jQuery('#wprtsp_pop').css('height', jQuery("#wprtsp_pop").contents().find("html").height());
         jQuery('#wprtsp_pop').css('width', jQuery("#wprtsp_pop").contents().find("body").width());
     }).delay(settings.general_duration * 1000).fadeOut(2000, function () {
-        if (wprtsp_conversions_messages.length) {
-            clock = setTimeout(wprtsp_show_message, settings.general_subsequent_popup_time * 1000);
-        }
+        clock = setTimeout(wprtsp_show_message, settings.general_subsequent_popup_time * 1000);
     });
 
     jQuery('#wprtsp_pop').mouseover(function () {
@@ -76,9 +73,7 @@ function wprtsp_show_message() {
         wprtsp_pop.stop(true, true).show(200);
     }).mouseout(function () {
         wprtsp_pop.stop(true, true).delay(200).fadeOut(2000, function () {
-            if (wprtsp_conversions_messages.length) {
-                clock = setTimeout(wprtsp_show_message, settings.general_subsequent_popup_time * 1000);
-            }
+            clock = setTimeout(wprtsp_show_message, settings.general_subsequent_popup_time * 1000);
         });
     });
 }
@@ -86,33 +81,131 @@ function wprtsp_show_message() {
 function wprtsp_get_message() {
     if (flag == 's' && wprtsp_conversions_messages.length) {
         console.log(flag);
-        //flag = 'h';
+        set_next_flag();
         return wprtsp_conversions_messages.shift();
-        //message = wprtsp_conversions_messages.shift();
-        return '<span class="wprtsp_container_wrap" style="'+settings.styles.container_wrap_style+'">'+message+'</span>';
     }
-    /*
     if (flag == 'h') {
-        //if(flag == 'h' && wprtsp_hotstat_messages.length) {
         console.log(flag);
-        flag = 'l';
-        //return wprtsp_hotstat_messages.shift();
+        set_next_flag();
+        return wprtsp_hotstats_messages.shift();
     }
     if (flag == 'l') {
-        //if(flag == 'l' && wprtsp_livestat_messages.length) {
         console.log(flag);
-        flag = 'c';
-        //return wprtsp_livestat_messages.shift();
+        set_next_flag();
+        return wprtsp_livestats_messages.shift();
     }
     if (flag == 'c') {
-        //if(flag == 'c' && wprtsp_cta_messages.length) {
-        // once CTA is shown, no need to show newer popups
         console.log(flag);
+        // once CTA is shown, no need to show newer popups
+        //set_next_flag();
         clearTimeout(clock);
-        //return wprtsp_cta_messages.shift();
+        return wprtsp_ctas_messages.shift();
     }
-    */
-    //return 'wprtsp_get_message';
+}
+
+function init_flag() {
+    if(wprtsp_conversions_messages.length) {
+        flag = 's';
+        console.log('initiated flag to ' + flag);
+        return;
+    }
+    if(wprtsp_hotstats_messages.length) {
+        flag = 'h';
+        console.log('initiated flag to ' + flag);
+        return;
+    }
+    if(wprtsp_livestats_messages.length) {
+        flag = 'l';
+        console.log('initiated flag to ' + flag);
+        return;
+    }
+    if(wprtsp_ctas_messages.length) {
+        flag = 'c';
+        console.log('initiated flag to ' + flag);
+        return;
+    }
+}
+
+function set_next_flag(){
+    console.log('set_next_flag received ' + flag);
+    console.log('wprtsp_hotstats_messages.length' + wprtsp_hotstats_messages.length);
+    console.log('wprtsp_livestats_messages.length' + wprtsp_livestats_messages.length);
+    console.log('wprtsp_ctas_messages.length' + wprtsp_ctas_messages.length);
+   
+    if(flag == 's') {
+        if(wprtsp_hotstats_messages.length){
+            flag = 'h';
+            return;
+        }
+        if(wprtsp_livestats_messages.length){
+            flag = 'l';
+            return;
+        }
+        if(wprtsp_ctas_messages.length){
+            flag = 'c';
+            return;
+        }
+        if(wprtsp_conversions_messages.length){
+            flag = 's';
+            return;
+        }
+    }
+    if(flag == 'h') {
+        if(wprtsp_livestats_messages.length) {
+            flag = 'l';
+            return;
+        }
+        if(wprtsp_ctas_messages.length) {
+            flag = 'c';
+            return;
+        }
+        if(wprtsp_conversions_messages.length){
+            flag = 's';
+            return;
+        }
+        if(wprtsp_hotstats_messages.length){
+            flag = 'h';
+            return;
+        }
+    }
+    if(flag == 'l') {
+        if(wprtsp_ctas_messages.length) {
+            flag = 'c';
+            return;
+        }
+        if(wprtsp_conversions_messages.length){
+            flag = 's';
+            return;
+        }
+        if(wprtsp_hotstats_messages.length){
+            flag = 'h';
+            return;
+        }
+        if(wprtsp_livestats_messages.length) {
+            flag = 'l';
+            return;
+        }
+    }
+    if(flag == 'c') {
+        clearTimeout(clock);
+        /*if(wprtsp_ctas_messages.length) {
+            flag = 'c';
+            return;
+        }
+        if(wprtsp_conversions_messages.length){
+            flag = 's';
+            return;
+        }
+        if(wprtsp_hotstats_messages.length){
+            flag = 'h';
+            return;
+        }
+        if(wprtsp_livestats_messages.length) {
+            flag = 'l';
+            return;
+        }
+        */
+    }
 }
 
 function build_conversions() {
@@ -137,7 +230,6 @@ function build_hotstats() {
     console.dir(wprtsp_hotstats_messages);
 }
 
-
 function hotstats_html(hotstat){
     return `<div class="wprtsp_wrap" style="${settings.styles.popup_wrap_style}" class="wprtsp-hotstat">
     <span class="wprtsp_left" style="margin-right: .5em; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 1000px; background:url('https://dev.converticacommerce.com/woocommerce-sandbox/wp-content/plugins/wp-social-proof-pro/assets/map.svg' ) center; background-size: cover;"></span>
@@ -159,10 +251,10 @@ function build_ctas() {
 }
 
 function ctas_html(cta) {
-    return `<div class="wprtsp_wrap" style="${settings.styles.popup_wrap_style}" class="wprtsp-hotstat">
-    <span class="wprtsp_left" style="margin-right: .5em; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 1000px; background:url('https://dev.converticacommerce.com/woocommerce-sandbox/wp-content/plugins/wp-social-proof-pro/assets/map.svg' ) center; background-size: cover;"></span>
+    return `<div class="wprtsp_wrap" style="${settings.styles.popup_wrap_style}" class="wprtsp-cta">
+    <a class="wprtsp_left" href="${cta['link']}" style="margin-right: .5em; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 1000px; background:url('https://dev.converticacommerce.com/woocommerce-sandbox/wp-content/plugins/wp-social-proof-pro/assets/map.svg' ) center; background-size: cover;"></a>
     <div class="wprtsp_right" style="margin-left: .5em; margin-right: .5em; ">
-        <div class="wprtsp_line1" style="${settings.styles.line1_style}">${cta['title']}</div>
-        <div class="wprtsp_line2" style="${settings.styles.line2_style}">${cta['message']}</div>
+        <div class="wprtsp_line1" style="${settings.styles.line1_style}"><a href="${cta['link']}">${cta['title']}</a></div>
+        <div class="wprtsp_line2" style="${settings.styles.line2_style}"><a href="${cta['link']}">${cta['message']}</a></div>
     </div></div>`;
 }

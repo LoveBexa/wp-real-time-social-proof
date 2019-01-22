@@ -149,7 +149,7 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         'ctas_sound_notification' => 1, // bool
         'ctas_sound_notification_file' => 'demonstrative.mp3', // string
         'ctas_title_notification' => 1, // bool
-        'ctas' => array( array('title' => 'Offer just for you', 'message' => 'Get 15% discount with coupon INSERTCOUPONHERE')),
+        'ctas' => array( array('title' => 'Offer just for you', 'message' => 'Get 15% discount with coupon INSERTCOUPONHERE', 'link' => '')),
 
         'positions' => array('bl' => 'Bottom Left', 'br' => 'Bottom Right', 'c' => 'Center'),
         
@@ -212,7 +212,7 @@ function wpsppro_sanitize( $request ) {
         $ctas = $request['ctas'];
         foreach($ctas as $cta => $value) {
         
-            if(empty($value['title']) && empty($value['message'])) {
+            if( empty($value['title'] ) && empty( $value['message']) && empty($value['link']) ) {
                 unset($ctas[$cta]);
             }
         }
@@ -770,9 +770,10 @@ function wpsppro_ctas_meta_box() {
     <table id="ctas-fieldset-one" width="100%">
         <thead>
             <tr>
-                <th width="40%">Title</th>
+                <th width="15%">Title</th>
                 <th width="40%">Call To Action</th>
-                <th width="8%"></th>
+                <th width="35%">Click-Through Link</th>
+                <th width="10%"></th>
             </tr>
         </thead>
         <tbody>
@@ -787,6 +788,7 @@ function wpsppro_ctas_meta_box() {
                     <tr>
                         <td><input type="text" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][title]" value="<?php echo $elem['title']; ?>" /></td>
                         <td><input type="text" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][message]" value="<?php echo $elem['message']; ?>" /></td>
+                        <td><input type="url" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][link]" value="<?php echo $elem['link']; ?>" /></td>
                         <td><a class="button remove-row" href="#">Remove</a></td>
                     </tr>
                 <?php
@@ -796,6 +798,7 @@ function wpsppro_ctas_meta_box() {
                 <tr class="empty-row screen-reader-text">
                     <td><input type="text" id="ctas_title_empty" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][title]" /></td>
                     <td><input type="text" id="ctas_message_empty" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][message]" /></td>
+                    <td><input type="text" id="ctas_link_empty" class="widefat" name="wprtsp[ctas][<?php echo $i ?>][link]" /></td>
                 <td><a class="button remove-row" href="#">Remove</a></td>
             </tr>
         </tbody>
@@ -809,6 +812,7 @@ function wpsppro_ctas_meta_box() {
             row.insertBefore( '#ctas-fieldset-one tbody>tr:last' );
             $('#ctas_title_empty').attr('name', function(){$(this).removeAttr('id'); return 'wprtsp[ctas]['+$time+'][title]'});
             $('#ctas_message_empty').attr('name', function(){$(this).removeAttr('id');return 'wprtsp[ctas]['+$time+'][message]'});
+            $('#ctas_link_empty').attr('name', function(){$(this).removeAttr('id');return 'wprtsp[ctas]['+$time+'][link]'});
             return false;
         });
         
