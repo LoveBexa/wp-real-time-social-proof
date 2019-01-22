@@ -127,7 +127,7 @@ function wprtsppro_get_cpt_defaults($settings = array()){
 
         'conversions_enable' => 1, // bool
         'conversions_enable_mob' => 1, // bool
-        'conversions_shop_type' => apply_filters('wprtsp_shop_type', class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' )),
+        'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' ),
         'conversion_template_line1' => '{name} {location}',
         'conversion_template_line2' => '{action} {product} {time}',
         'conversion_generated_action' => 'subscribed to the',
@@ -400,7 +400,7 @@ function wpsppro_conversions_meta_box(){
         $sources[] = 'WooCommerce';
     }
     $sources[] = 'Generated';
-
+    $sources = apply_filters('wprtsp_shop_type', $sources);
     $sources_html = '';
     foreach($sources as $key=>$value) {
         $sources_html .= '<option value="' . $value . '" ' . selected( $conversions_shop_type, $value, false ) .'>'. preg_replace('/[^\da-z]/i',' ', $value) .'</option>';

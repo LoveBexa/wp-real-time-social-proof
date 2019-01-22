@@ -627,7 +627,7 @@ class WPRTSP {
 
                 //'conversions_enable' => true,
                 //'conversions_show_on_mobile' => true,
-                'conversions_shop_type' => apply_filters('wprtsp_shop_type', class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated' )),
+                'conversions_shop_type' => class_exists('Easy_Digital_Downloads') ?  'Easy_Digital_Downloads' : ( class_exists( 'WooCommerce' ) ?  'WooCommerce' :  'Generated'),
                 'conversion_template_line1' => '{name} {location}',
                 'conversion_template_line2' => 'just {action} {product} {time}.',
                 'conversion_generated_action' => 'subscribed to the',
@@ -764,6 +764,8 @@ class WPRTSP {
             $sources[] = 'WooCommerce';
         }
         $sources[] = 'Generated';
+        
+        $sources = apply_filters('wprtsp_shop_type', $sources);
 
         $sources_html = '';
         foreach($sources as $key=>$value) {
