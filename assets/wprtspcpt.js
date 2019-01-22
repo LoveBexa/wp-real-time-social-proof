@@ -22,10 +22,20 @@ if (jQuery) {
             if ( ! settings.hasOwnProperty('conversions_enable') && settings.proofs.conversions && settings.proofs.conversions.length )  {
                 build_conversions();
             }
-            /*
-            if (settings.proofs.hotstats && settings.proofs.hotstats.length) {
-                hotstatdata = build_hotstats();
+            
+            if ( settings.hasOwnProperty('hotstats_enable') && settings.hotstats && ! settings.is_mobile && settings.proofs.hotstats && settings.proofs.hotstats.length ||
+            settings.hasOwnProperty('hotstatss_enable_mob') && settings.hotstats_enable_mob && settings.is_mobile && settings.proofs.hotstats && settings.proofs.hotstats.length
+            ) {
+                build_hotstats();
             }
+
+            if ( settings.hasOwnProperty('ctas_enable') && settings.ctas_enable && ! settings.is_mobile && settings.proofs.ctas && settings.proofs.ctas.length ||
+            settings.hasOwnProperty('ctas_enable_mob') && settings.ctas_enable_mob && settings.is_mobile && settings.proofs.ctas && settings.proofs.ctas.length
+            ) {
+                build_ctas();
+            }
+
+            /*
             if (settings.proofs.livestats && settings.proofs.livestats.length) {
                 livestatdata = build_livestats();
             }
@@ -111,17 +121,30 @@ function build_conversions() {
     }
 }
 
-function conversions_html(){
+function conversions_html(conversion){
     return `<div class="wprtsp_wrap" style="${settings.styles.popup_wrap_style}" class="wprtsp-conversion">
-    <a class="wprtsp_left" href="${settings.proofs.conversions[i]['link']}" style="margin-right: .5em; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 1000px; background:url('https://dev.converticacommerce.com/woocommerce-sandbox/wp-content/plugins/wp-social-proof-pro/assets/map.svg' ) center; background-size: cover;"></a>
+    <a class="wprtsp_left" href="${conversion['link']}" style="margin-right: .5em; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 1000px; background:url('https://dev.converticacommerce.com/woocommerce-sandbox/wp-content/plugins/wp-social-proof-pro/assets/map.svg' ) center; background-size: cover;"></a>
     <div class="wprtsp_right" style="margin-left: .5em; margin-right: .5em; ">
-        <div class="wprtsp_line1" style="${settings.styles.line1_style}"><a href="${settings.proofs.conversions[i]['link']}">${settings.proofs.conversions[i]['line1']}</a></div>
-        <div class="wprtsp_line2" style="${settings.styles.line2_style}"><a href="${settings.proofs.conversions[i]['link']}">${settings.proofs.conversions[i]['line2']}</a></div>
+        <div class="wprtsp_line1" style="${settings.styles.line1_style}"><a href="${conversion['link']}">${conversion['line1']}</a></div>
+        <div class="wprtsp_line2" style="${settings.styles.line2_style}"><a href="${conversion['link']}">${conversion['line2']}</a></div>
     </div></div>`;
 }
 
 function build_hotstats() {
-    //console.log(settings.proofs.hotstats);
+    for (i = 0; i < settings.proofs.hotstats.length; i++) {
+        wprtsp_hotstats_messages.push(hotstats_html(settings.proofs.hotstats[i]));
+    }
+    console.dir(wprtsp_hotstats_messages);
+}
+
+
+function hotstats_html(hotstat){
+    return `<div class="wprtsp_wrap" style="${settings.styles.popup_wrap_style}" class="wprtsp-hotstat">
+    <span class="wprtsp_left" style="margin-right: .5em; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 1000px; background:url('https://dev.converticacommerce.com/woocommerce-sandbox/wp-content/plugins/wp-social-proof-pro/assets/map.svg' ) center; background-size: cover;"></span>
+    <div class="wprtsp_right" style="margin-left: .5em; margin-right: .5em; ">
+        <div class="wprtsp_line1" style="${settings.styles.line1_style}">${hotstat['line1']}</div>
+        <div class="wprtsp_line2" style="${settings.styles.line2_style}">${hotstat['line2']}</div>
+    </div></div>`;
 }
 
 function build_livestats() {
@@ -129,5 +152,17 @@ function build_livestats() {
 }
 
 function build_ctas() {
-    //console.log(settings.proofs.ctas);
+    for (i = 0; i < settings.proofs.ctas.length; i++) {
+        wprtsp_ctas_messages.push(ctas_html(settings.proofs.ctas[i]));
+    }
+    console.dir(wprtsp_ctas_messages);
+}
+
+function ctas_html(cta) {
+    return `<div class="wprtsp_wrap" style="${settings.styles.popup_wrap_style}" class="wprtsp-hotstat">
+    <span class="wprtsp_left" style="margin-right: .5em; width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 1000px; background:url('https://dev.converticacommerce.com/woocommerce-sandbox/wp-content/plugins/wp-social-proof-pro/assets/map.svg' ) center; background-size: cover;"></span>
+    <div class="wprtsp_right" style="margin-left: .5em; margin-right: .5em; ">
+        <div class="wprtsp_line1" style="${settings.styles.line1_style}">${cta['title']}</div>
+        <div class="wprtsp_line2" style="${settings.styles.line2_style}">${cta['message']}</div>
+    </div></div>`;
 }
