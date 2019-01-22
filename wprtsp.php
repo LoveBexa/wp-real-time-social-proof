@@ -81,6 +81,7 @@ class WPRTSP {
         //add_filter('wprtsp_vars', array($this, 'wprtsp_localize_settings'));
         add_filter('wprtsp_vars', array($this, 'wprtsp_get_styles'));
         add_filter('wprtsp_vars', array($this, 'wprtsp_detect_mobile'));
+        add_filter('wprtsp_vars', array($this, 'wprtsp_add_vars'));
         add_filter('wprtsp_get_proof_data_conversions_WooCommerce', array( $this, 'get_wooc_conversions'), 10, 2 );
         
         add_filter('wprtsp_tag_WooCommerce_name', array($this, 'get_tag_WooCommerce_name'));
@@ -102,6 +103,10 @@ class WPRTSP {
         //add_action( 'in_plugin_update_message'. basename(__DIR__).'/'.basename(__FILE__), array($this, 'plugin_update_message'), 10, 2 );
     }
 
+    function wprtsp_add_vars($vars){
+        $vars['url'] = $this->uri;
+        return $vars;
+    }
     function enqueue_fingerprint(){
         if($this->wprtsp_get_notification()){
             wp_enqueue_script( 'wprtsp-fp', $this->uri .'assets/fingerprint2.min.js', array(), null, true);

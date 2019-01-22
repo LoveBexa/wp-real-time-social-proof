@@ -10,6 +10,7 @@ add_action( 'save_post', 'wpsppro_save_meta_box_data' );
 add_action( 'wprtsp_enabled', 'wpsppro_enabled', 10, 2 );
 add_filter( 'wprtsp_sanitize', 'wpsppro_sanitize', 10, 2 );
 add_filter( 'wprtsp_get_proof_data_ctas', 'wpsppro_get_proof_data_ctas', 10, 2 );
+
 add_action( 'admin_enqueue_scripts', 'wpsppro_enqueue');
 //add_action( 'wp_ajax_wprtsppro_save_gaprofile', 'wprtsppro_save_gaprofile' );
 add_action( 'admin_init', 'wprtsppro_save_gaprofile' );
@@ -90,7 +91,7 @@ function wpsppro_get_proof_data_ctas( $ctas, $settings) {
 
 function wprtspro_conversions_sound_notification_markup($markup, $settings){
     $wprtsp = WPRTSP::get_instance();
-    return '<audio preload="auto" autoplay="true" src="' .  $wprtsp->uri .'pro/sounds/'.$settings['conversions_sound_notification_file'].'">Your browser does not support the <code>audio</code>element.</audio>';
+    return '<audio preload="auto" autoplay="true" src="' .  $wprtsp->uri .'assets/sounds/'.$settings['conversions_sound_notification_file'].'">Your browser does not support the <code>audio</code>element.</audio>';
 }
 
 function wpsppro_add_meta_boxes(){
@@ -103,7 +104,7 @@ function wpsppro_add_meta_boxes(){
 
 function wprtspro_sound_notification_file($file, $settings){
     $wprtsp = WPRTSP::get_instance();
-    return $wprtsp->uri .'pro/sounds/'.$settings['conversions_sound_notification_file'];
+    return $wprtsp->uri .'assets/sounds/'.$settings['conversions_sound_notification_file'];
 }
 
 function wprtsppro_get_cpt_defaults($settings = array()){
@@ -142,7 +143,7 @@ function wprtsppro_get_cpt_defaults($settings = array()){
         'hotstats_sound_notification_file' => 'salient.mp3', // string
         'hotstats_title_notification' => 0, // bool
         'hotstats_timeframe' => 1,
-        'hotstats_timeframes' => array(1, 2, 3, 7, 30, -1),
+        'hotstats_timeframes' => array(1, 2, 3, 7, -1),
 
         'ctas_enable' => 1,
         'ctas_enable_mob' => 1,
@@ -376,7 +377,7 @@ function wpsppro_conversions_meta_box(){
     $conversions_sound_notification = $settings['conversions_sound_notification'];
     $conversions_sound_notification_file = $settings['conversions_sound_notification_file'];
 
-    $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
+    $files = array_diff(scandir($wprtsp->dir . 'assets/sounds'), array('.', '..'));
 
     $available_audio = '<select id="wprtsp_conversions_sound_notification_file" name="wprtsp[conversions_sound_notification_file]">';
     foreach ($files as $file ) {
@@ -495,7 +496,7 @@ function wpsppro_conversions_meta_box(){
                 return;
             }
             
-            jQuery('#wprtsp_conversions_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_conversions_sound_notification_file').val());
+            jQuery('#wprtsp_conversions_sound_preview').attr('src','<?php echo $wprtsp->uri.'assets/sounds/' ?>' + jQuery('#wprtsp_conversions_sound_notification_file').val());
             document.getElementById("wprtsp_conversions_sound_preview").play(); 
         });
     });
@@ -520,7 +521,7 @@ function wpsppro_live_meta_box(){
     $livestats_sound_notification = $settings['livestats_sound_notification'];
     $livestats_sound_notification_file = $settings['livestats_sound_notification_file'];
     $available_audio = '<select id="wprtsp_livestats_sound_notification_file" name="wprtsp[livestats_sound_notification_file]">';
-    $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
+    $files = array_diff(scandir($wprtsp->dir . 'assets/sounds'), array('.', '..'));
     foreach ($files as $file ) {
         
         $available_audio .= '<option '. disabled( $livestats_sound_notification, false, false) .' value="'.$file.'" '. selected( $livestats_sound_notification_file, $file, false ) .'>'.ucwords(str_replace('-', ' ',explode('.', $file)[0])).'</option>';
@@ -591,7 +592,7 @@ function wpsppro_live_meta_box(){
                 return;
             }
             
-            jQuery('#wprtsp_livestats_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_livestats_sound_notification_file').val());
+            jQuery('#wprtsp_livestats_sound_preview').attr('src','<?php echo $wprtsp->uri.'assets/sounds/' ?>' + jQuery('#wprtsp_livestats_sound_notification_file').val());
             document.getElementById("wprtsp_livestats_sound_preview").play(); 
         });
         </script>
@@ -628,7 +629,7 @@ function wpsppro_hot_stats_meta_box(){
     }
 
     $positions_html = '<select id="wprtsp_hotstats_timeframe" name="wprtsp[hotstats_timeframe]">'.$positions_html.'</select>';
-    $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
+    $files = array_diff(scandir($wprtsp->dir . 'assets/sounds'), array('.', '..'));
     $available_audio = '<select id="wprtsp_hotstats_sound_notification_file" name="wprtsp[hotstats_sound_notification_file]">';
     foreach ($files as $file ) {
         
@@ -700,7 +701,7 @@ function wpsppro_hot_stats_meta_box(){
                 return;
             }
             
-            jQuery('#wprtsp_hotstats_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_hotstats_sound_notification_file').val());
+            jQuery('#wprtsp_hotstats_sound_preview').attr('src','<?php echo $wprtsp->uri.'assets/sounds/' ?>' + jQuery('#wprtsp_hotstats_sound_notification_file').val());
             document.getElementById("wprtsp_hotstats_sound_preview").play(); 
         });
         </script>
@@ -727,7 +728,7 @@ function wpsppro_ctas_meta_box() {
     $ctas_sound_notification = $settings['ctas_sound_notification'];
     $ctas_sound_notification_file = $settings['ctas_sound_notification_file'];
     $available_audio = '<select id="wprtsp_ctas_sound_notification_file" name="wprtsp[ctas_sound_notification_file]">';
-    $files = array_diff(scandir($wprtsp->dir . 'pro/sounds'), array('.', '..'));
+    $files = array_diff(scandir($wprtsp->dir . 'assets/sounds'), array('.', '..'));
     foreach ($files as $file ) {
         
         $available_audio .= '<option '. disabled( $ctas_sound_notification, false, false) .' value="'.$file.'" '. selected( $ctas_sound_notification_file, $file, false ) .'>'.ucwords(str_replace('-', ' ',explode('.', $file)[0])).'</option>';
@@ -845,7 +846,7 @@ function wpsppro_ctas_meta_box() {
                 return;
             }
             
-            jQuery('#wprtsp_ctas_sound_preview').attr('src','<?php echo $wprtsp->uri.'pro/sounds/' ?>' + jQuery('#wprtsp_ctas_sound_notification_file').val());
+            jQuery('#wprtsp_ctas_sound_preview').attr('src','<?php echo $wprtsp->uri.'assets/sounds/' ?>' + jQuery('#wprtsp_ctas_sound_notification_file').val());
             document.getElementById("wprtsp_ctas_sound_preview").play(); 
         });
     </script>
@@ -938,18 +939,18 @@ function wprtspro_hotstats_edd( $hotstats , $settings ) {
                 'after' => date('c', $period)
         );
     }
-    //llog($args);
-    $payments = new WP_Query( $args );			
     
+    $payments = new WP_Query( $args );			
+
     if ( $payments->post_count > 0 ) {
-        //llog($payments);
+        
         $hotstats[] = array(
             'line1' => $payments->post_count .' products sold',
             'line2' => $strtime,
         );
         wp_reset_postdata();
     }
-    
+
     return $hotstats;
 }
 
